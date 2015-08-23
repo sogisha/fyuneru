@@ -49,6 +49,7 @@ else:
 
 tun.netmask = "255.255.255.0"
 tun.mtu = MTU
+tun.up()
 
 # TODO drop root
 
