@@ -6,6 +6,7 @@ from salsa20 import XSalsa20_xor
 
 from _config import config
 
+"""
 KEY = hashlib.pbkdf2_hmac(\
     "sha256",
     config["KEY"],
@@ -21,6 +22,10 @@ HMACKEY = hashlib.pbkdf2_hmac(\
     config["PBKDF2_ITERATION"],
     64
 )
+"""
+KEY = hashlib.sha256(config["KEY"]).digest()
+HMACKEY = hashlib.sha256(KEY).digest()
+KEY = KEY[:32]
 
 _HMACALGO = hashlib.sha256
 _HMACLEN = len(_HMACALGO('').digest())
