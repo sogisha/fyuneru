@@ -25,7 +25,7 @@ socket.once('connect', function(){
     console.log('connected to server');
     for(var i=0; i<PORTS.length; i++){
         UDPPorts[i].on('data', function(data){
-            socket.send('data', data);
+            socket.emit('data', data);
         });
     }
     socket.on('data', function(data){

@@ -17,7 +17,7 @@ function newSocketConnection(socket){
     for(var i=0; i<UDPPorts.length; i++){
         UDPPorts[i].on('data', function(data){
             // send UDP emitted data back to client
-            socket.send('data', data);            
+            socket.emit('data', data);            
         });
     }
     socket.on('data', function(data){
