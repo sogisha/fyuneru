@@ -7,59 +7,108 @@ import random
 
 from pytun import TunTapDevice
 
-from _config import config
-from _crypto import encrypt, decrypt
-
-def log(x):
-    print x
-if config["DEBUG"]:
-    def debug(x):
-        print x
-else:
-    debug = lambda x: None
-
+from _crypto import Crypto 
 
 parser = argparse.ArgumentParser()
 parser.add_argument(\
-    "role",
+    "--debug",
+    action="store_true",
+    default=False
+)
+parser.add_argument(\
+    "--role",
     metavar="ROLE",
     type=str,
-    choices=["s", "c"],
-    default="s"
+    choices=["server", "client"],
+    default="s",
+    required=True
 )
+parser.add_argument(\
+    "--server-ip",
+    metavar="SERVER_IP",
+    type=str,
+    required=True
+)
+parser.add_argument(\
+    "--client-ip",
+    metavar="CLIENT_IP",
+    type=str,
+    required=True
+)
+parser.add_argument(\
+    "--key",
+    metavar="KEY",
+    type=str,
+    required=True
+)
+parser.add_argument(\
+    "PORT",
+    metavar="PORT",
+    type=int,
+    nargs="+"
+)
+
 args = parser.parse_args()
-tun = TunTapDevice()
+
 
 MTU = 1000 
 UDPCONNECTOR_WORD = \
     "Across the Great Wall, we can reach every corner in the world."
+UDP_PORTS = args.PORT
 
 ##############################################################################
 
-UDP_PORT_BASE = None
+# ---------- config log/debug functions
 
-if "c" == args.role:
-    tun.addr = "10.1.0.2"
-    tun.dstaddr = "10.1.0.1"
-    UDP_PORT_BASE = config["CLIENT_UDP_BASE"]
+def log(x):
+    print x
+if args.debug:
+    def debug(x):
+        print x
+    log("Debug mode entered.")
 else:
-    tun.addr = "10.1.0.1"
-    tun.dstaddr = "10.1.0.2"
-    UDP_PORT_BASE = config["SERVER_UDP_BASE"]
+    debug = lambda x: None
 
+# ---------- config crypto functions
+
+crypto = Crypto(args.key)
+encrypt, decrypt = crypto.encrypt, crypto.decrypt
+
+# ---------- config TUN device
+
+tun = TunTapDevice()
+if "c" == args.role:
+    log("Running as client.")
+    tun.addr = args.client_ip #"10.1.0.2"
+    tun.dstaddr = args.server_ip #"10.1.0.1"
+else:
+    log("Running as server.")
+    tun.addr = args.server_ip #"10.1.0.1"
+    tun.dstaddr = args.client_ip #"10.1.0.2"
 tun.netmask = "255.255.255.0"
 tun.mtu = MTU
+log(\
+    """%s: mtu %d  addr %s  netmask %s  dstaddr %s""" % \
+    (tun.name, tun.mtu, tun.addr, tun.netmask, tun.dstaddr)
+)
 tun.up()
+log("%s: up now." % tun.name)
 
-# TODO drop root
+# ---------- open UDP sockets
 
 reads = [tun] # for `select` function
 peers = []
-for i in xrange(0, config["TUNNELS"]):
+for portNum in UDP_PORTS:
     newSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    newSocket.bind(("127.0.0.1", UDP_PORT_BASE + i))
+    newSocket.bind(("127.0.0.1", portNum))
     reads.append(newSocket)
     peers.append(False)
+
+log("UDP: open ports %s" % ", ".join([str(i) for i in UDP_PORTS]))
+
+# TODO drop root
+
+##############################################################################
 
 while True:
     readables = select(reads, [], [])[0]
@@ -83,13 +132,13 @@ while True:
                 # connection word received, answer
                 peers[i] = sender
                 each.sendto(UDPCONNECTOR_WORD, sender)
-                log("[%d] <==> %s:%d" % (i, sender[0], sender[1]))
+                debug("[%d] <==> %s:%d" % (i, sender[0], sender[1]))
             else:
                 if peers[i] != sender:
                     continue
                 buf = decrypt(buf)
                 if buf == False: # if decryption failed
-                    print "[%d] --> %s: Bad packet." % (i, tun.name)
+                    debug("[%d] --> %s: Bad packet." % (i, tun.name))
                     continue
                 tun.write(buf)
                 debug("[%d] --> %s: %s" % (i, tun.name, buf.encode('hex')[:30]))
