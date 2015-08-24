@@ -19,7 +19,7 @@ class Crypto:
         worker.update(buf)
         return worker.digest()
 
-    def encrypt(buf):
+    def encrypt(self, buf):
         hmac = self.__HMAC(buf)
         iv = urandom(24) # since IV will be exposed, has to be crypto. random.
         cleartext = hmac + buf
