@@ -78,7 +78,7 @@ encrypt, decrypt = crypto.encrypt, crypto.decrypt
 # ---------- config TUN device
 
 tun = TunTapDevice()
-if "c" == args.role:
+if "client" == args.role:
     log("Running as client.")
     tun.addr = args.client_ip #"10.1.0.2"
     tun.dstaddr = args.server_ip #"10.1.0.1"
