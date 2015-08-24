@@ -1,16 +1,16 @@
-var PORTS = [7100, 7101, 7102];
-var SERVERPORT = 6000;
+#!/usr/bin/env node
 
-/****************************************************************************/
-if(process.argv.length < 3){
-    console.log("Usage: node client.js <SERVER_ADDRESS>");
+if(process.argv.length < 4){
+    console.log("Usage: node client.js <SERVER_ADDRESS>:<SERVER_PORT> UDP_PORT1 UDP_PORT2 ...");
     process.exit();
 }
 
-var SERVERADDR = process.argv[2];
+var SERVERADDR = process.argv[2],
+    PORTS = process.argv.slice(3);
+for(var i=0; i<PORTS.length; i++) PORTS[i] = parseInt(PORTS[i], 10);
 
 var io = require('socket.io-client');
-var SERVERURL = "ws://" + SERVERADDR + ":" + SERVERPORT;
+var SERVERURL = "ws://" + SERVERADDR;
 var socket = io(SERVERURL);
 var UDPAutoConnector = require('./udpAutoConnector');
 

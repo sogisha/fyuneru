@@ -1,5 +1,13 @@
-var PORTS = [17100, 17101, 17102];
-var SERVERPORT = 6000;
+#!/usr/bin/env node
+
+if(process.argv.length < 4){
+    console.log("Usage: node server.js <SERVER_PORT> UDP_PORT1 UDP_PORT2 ...");
+    process.exit();
+}
+
+var PORTS = process.argv.slice(3);
+var SERVERPORT = parseInt(process.argv[2], 10);
+for(var i=0; i<PORTS.length; i++) PORTS[i] = parseInt(PORTS[i], 10);
 
 /****************************************************************************/
 

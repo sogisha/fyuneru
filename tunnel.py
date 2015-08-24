@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from select import select
+import signal
 import socket
 import argparse
 import random
@@ -109,6 +110,14 @@ log("UDP: open ports %s" % ", ".join([str(i) for i in UDP_PORTS]))
 # TODO drop root
 
 ##############################################################################
+
+def doExit(signum, frame):
+    global reads 
+    print "Tunnel: exit now."
+    for each in reads:
+        each.close()
+    exit()
+signal.signal(signal.SIGTERM, doExit)
 
 while True:
     readables = select(reads, [], [])[0]

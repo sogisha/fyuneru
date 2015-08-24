@@ -136,4 +136,4 @@ Remember to configure the firewall on the server, to let
 
 ### Run
 
-Find the `run_as.js`, run `node run_as.js s` for setting up a server, 
+Find the `run_as.py`, run `python run_as.py s` for setting up a server, 
