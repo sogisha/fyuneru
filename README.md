@@ -136,4 +136,6 @@ Remember to configure the firewall on the server, to let
 
 ### Run
 
-Find the `run_as.py`, run `python run_as.py s` for setting up a server, 
+Find the `run_as.py`, run `python run_as.py s` for setting up a server, and
+`python run_as.py c` for setting up the client. You need root priviledge to
+do this.
