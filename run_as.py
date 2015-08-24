@@ -83,25 +83,41 @@ if proxyConfig.has_key("websocket"):
 
 ##############################################################################
 
-processCore = subprocess.Popen(coreCommand)
+try:
+    # ---------- start core
+    
+    processCore = subprocess.Popen(coreCommand)
 
-# ---------- now open proxies
+    # ---------- start proxies
 
-processProxies = []
-for cmd in proxyCommands:
-    processProxies.append(subprocess.Popen(cmd))
+    processProxies = []
+    for cmd in proxyCommands:
+        processProxies.append(subprocess.Popen(cmd))
 
-# ---------- deal with exiting and cleaning
+    # ---------- deal with exiting and cleaning
 
-def doExit(signum, frame):
-    global processCore, processProxies
-    print "Exit now."
-    processCore.terminate()
-    for each in processProxies:
-        each.terminate()
-    exit()
-signal.signal(signal.SIGTERM, doExit)
-signal.signal(signal.SIGINT, doExit)
+    def doExit(signum, frame):
+        global processCore, processProxies
+        print "Exit now."
+        try:
+            processCore.terminate()
+        except:
+            pass
+        for each in processProxies:
+            try:
+                each.terminate()
+            except:
+                pass
+        exit()
+    signal.signal(signal.SIGTERM, doExit)
+    signal.signal(signal.SIGINT, doExit)
 
-processCore.wait()
-doExit(None, None)
+    # ---------- wait for the core process
+
+    processCore.wait()
+
+except:
+    pass
+
+finally:
+    doExit(None, None)
