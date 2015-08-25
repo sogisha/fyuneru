@@ -14,6 +14,12 @@ parser = argparse.ArgumentParser(description="""
     Requires root priviledge for running this script.
 """)
 parser.add_argument(\
+    "--debug",
+    action="store_true",
+    default=False,
+    help = "Print debug info, e.g. packet data."
+)
+parser.add_argument(\
     "mode",
     metavar="MODE",
     type=str, 
@@ -53,6 +59,8 @@ coreCommand = [\
     '--client-ip', CLIENT_VIRTUAL_IP,
     '--key', KEY,
 ]
+if args.debug:
+    coreCommand += ['--debug']
 coreCommand += [str(i) for i in UDP_PORTS]
 
 # ---------- proxy commands

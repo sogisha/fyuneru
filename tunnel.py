@@ -8,7 +8,8 @@ import random
 
 from pytun import TunTapDevice
 
-from _crypto import Crypto 
+from _crypto import Crypto
+from _debug import showPacket
 
 parser = argparse.ArgumentParser()
 parser.add_argument(\
@@ -132,7 +133,7 @@ while True:
             workerSocket = reads[i + 1]
             # encrypt and sign buf
             workerSocket.sendto(encrypt(buf), peers[i])
-            debug("%s --> [%d]: %s" % (tun.name, i, buf.encode('hex')[:30]))
+            debug("%s --> [%d]:\n%s\n" % (tun.name, i, showPacket(buf)))
         else:
             i = reads.index(each) - 1
             buf, sender = each.recvfrom(65536)
@@ -150,4 +151,4 @@ while True:
                     debug("[%d] --> %s: Bad packet." % (i, tun.name))
                     continue
                 tun.write(buf)
-                debug("[%d] --> %s: %s" % (i, tun.name, buf.encode('hex')[:30]))
+                debug("[%d] --> %s:\n%s\n" % (i, tun.name, showPacket(buf)))

@@ -20,11 +20,11 @@ function UDPAutoConnector(port){
             return;
         }
         self.emit('data', data);
-        console.log("Recv fr UDPPort:", data);
+        //console.log("Recv fr UDPPort:", data);
     });
 
     this.send = function(data){
-        console.log("Send to UDPPort:", data);
+        //console.log("Send to UDPPort:", data);
         socket.send(data, 0, data.length, port, '127.0.0.1');
     }
 
