@@ -53,7 +53,7 @@ parser.add_argument(\
 args = parser.parse_args()
 
 
-MTU = 1000 
+MTU = 1500 
 UDPCONNECTOR_WORD = \
     "Across the Great Wall, we can reach every corner in the world."
 UDP_PORTS = args.PORT
@@ -124,7 +124,7 @@ while True:
     readables = select(reads, [], [])[0]
     for each in readables:
         if each == tun:
-            buf = each.read(each.mtu)
+            buf = each.read(65536) # each.read(each.mtu)
             # write to socket who have got a peer
             possible = [x for x in xrange(0, len(peers)) if peers[x] != False]
             if len(possible) == 0:
