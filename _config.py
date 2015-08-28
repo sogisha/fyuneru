@@ -62,13 +62,12 @@ class Configuration:
     def getProxyConfig(self, name):
         if not self.__proxies.has_key(name):
             raise ConfigFileException("No such proxy method defined.")
-        proxyConfig = self.__proxies[name]["config"]
-        return None # XXX TODO return accordingly generated command for initiating this proxy
+        proxy = self.__proxies[name]
+        proxyConfig = proxy["config"]
+        proxyServerUDPPort = proxy["ports"]["server"]
+        proxyClientUDPPort = proxy["ports"]["client"]
 
-    def getProxyPorts(self, name):
-        if not self.__proxies.has_key(name):
-            raise ConfigFileException("No such proxy method defined.")
-        return self.__proxies[name]["ports"]
+        return None # XXX TODO return accordingly generated command for initiating this proxy
 
     def __init__(self, config):
         # try load the configuration file string, and parse into JSON.
