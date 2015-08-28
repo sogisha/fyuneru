@@ -23,10 +23,12 @@ class Configuration:
     def __loadCore(self, core):
         # parse json.core and save to class attributes
         
-        if type(core["key"]) != str:
+        # get key for cryptography
+        self.key = str(core["key"])
+        if type(self.key) != str:
             raise ConfigFileException("core.key is invalid.")
-        self.key = core["key"]
 
+        # get IP for server and client
         if not core["server"].has_key("ip"):
             raise ConfigFileException("core.server.ip must be specified.")
         if not core["client"].has_key("ip"):
@@ -34,8 +36,39 @@ class Configuration:
         self.serverIP = core["server"]["ip"]
         self.clientIP = core["client"]["ip"]
 
-        
-        
+    def __loadProxyAllocations(self, core, proxies):
+        # get and validate proxy and ports allocations
+        self.__proxies = {}
+
+        udpAllocations = core["udpalloc"]
+        for allocName in udpAllocations:
+            if not proxies.has_key(allocName):
+                raise ConfigFileException(\
+                    "Proxy method [%s] not defined" % allocName
+                )
+            proxyConfig = proxies[allocName]
+            allocConfig = udpAllocations[allocName]
+            self.__proxies[allocName] = {
+                "ports": {
+                    "server": allocConfig["server"],
+                    "client": allocConfig["client"],
+                },
+                "config": proxyConfig
+            }
+
+    def listProxies(self):
+        return self.__proxies.keys()
+
+    def getProxyConfig(self, name):
+        if not self.__proxies.has_key(name):
+            raise ConfigFileException("No such proxy method defined.")
+        proxyConfig = self.__proxies[name]["config"]
+        return None # XXX TODO return accordingly generated command for initiating this proxy
+
+    def getProxyPorts(self, name):
+        if not self.__proxies.has_key(name):
+            raise ConfigFileException("No such proxy method defined.")
+        return self.__proxies[name]["ports"]
 
     def __init__(self, config):
         # try load the configuration file string, and parse into JSON.
@@ -66,6 +99,10 @@ class Configuration:
         ):
             raise ConfigFileException("config.json incomplete.")
         self.__loadCore(jsonCore)
+
+        # check for proxy allocations
+        jsonProxies = json["proxies"]
+        self.__loadProxyAllocations(jsonCore, jsonProxies)
 
 
 ##############################################################################
