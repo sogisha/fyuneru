@@ -1,5 +1,14 @@
 # -*- coding: utf-8 -*-
 
+"""
+Config reader and manager for the core program
+
+Class Configuration provides the functionalities for loading the `config.json`
+and getting them parsed, and for generating the commands necessary for
+initializing the proxy subprocesses(more details defined in module
+`proxyconf`).
+"""
+
 from distutils.version import StrictVersion
 from json import loads
 
@@ -73,7 +82,8 @@ class Configuration:
             type=proxyType, 
             serverPort=proxyServerUDPPort,
             clientPort=proxyClientUDPPort,
-            config=proxyConfig
+            config=proxyConfig,
+            key=self.key
         )
 
     def __init__(self, config):

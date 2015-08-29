@@ -5,7 +5,17 @@ class ProxyConfig
 
 Receives proxy configurations and return the command for initiating the
 process.
+
+This class manages the drivers of different types of proxies. To write a new
+proxy, a driver is necessary to be included here. 
+
+Some proxy methods(e.g. Shadowsocks) support additional encryption. The
+corresponding keys for that purpose is calculated using the core key, so that
+the user doesn't have to maintain them on their own.
 """
+import os
+import hashlib
+import hmac
 
 class ProxyConfigException(Exception):
     pass
@@ -14,25 +24,56 @@ class ProxyConfigException(Exception):
 
 class ProxyConfig:
     def __initWebsocket(self, mode):
-        proxyCommandWebsocket = ['node']
+        proxyCommand = ['node']
         if mode == 's':
-            proxyCommandWebsocket += [
-                './proxies/websocket/server.js', 
-                str(self.proxyConfig["server"]["webport"]),
+            proxyCommand += [
+                os.path.join(self.__proxyBase, 'websocket', 'server.js'),
+                str(self.proxyConfig["server"]["port"]),
             ]
-            proxyCommandWebsocket.append(str(self.portServer))
+            proxyCommand.append(str(self.portServer))
         else:
-            proxyCommandWebsocket += [
-                './proxies/websocket/client.js', 
+            proxyCommand += [
+                os.path.join(self.__proxyBase, 'websocket', 'client.js'),
                 "%s:%s" % (
                     str(self.proxyConfig["server"]["ip"]),
-                    str(self.proxyConfig["server"]["webport"]),
+                    str(self.proxyConfig["server"]["port"]),
                 ),
             ]
-            proxyCommandWebsocket.append(str(self.portClient))
-        return proxyCommandWebsocket
+            proxyCommand.append(str(self.portClient))
+        return proxyCommand
+
+    def __initShadowsocks(self, mode):
+        sharedsecret= hmac.HMAC(\
+            'shadowsocks',
+            self.__baseKey,
+            hashlib.sha256
+        ).digest().encode('base64')
+        proxyCommand = []
+        if mode == 's':
+            proxyCommand += [
+                'ssserver',
+                '-k', sharedsecret,
+                '-m', 'aes-256-cfb',
+                '-s', self.proxyConfig["server"]["ip"],
+                '-p', self.proxyConfig["server"]["port"],
+            ]
+        else:
+            proxyCommand += [
+                os.path.join(self.__proxyBase, 'shadowsocks', 'client.py'),
+                '-k', sharedsecret,
+                '-s', self.proxyConfig["server"]["ip"],
+                '-p', self.proxyConfig["server"]["port"],
+                '-b', '127.0.0.1',
+                '-l', self.proxyConfig["config"]["port"],
+                '-m', 'aes-256-cfb',
+            ]
 
     def __init__(self, **args):
+        if args.has_key("base"):
+            self.__proxyBase = args["base"]
+        else:
+            self.__proxyBase = os.path.join(".", "proxies")
+        self.__baseKey = args["key"]
         self.proxyType = args["type"]
         self.portClient = args["clientPort"]
         self.portServer = args["serverPort"]
@@ -46,7 +87,7 @@ class ProxyConfig:
             return self.__initWebsocket(mode)
 
         if self.proxyType == 'shadowsocks':
-            return [] 
+            return self.__initShadowsocks(mode)
         
         raise ProxyConfigException("Unsupported proxy type: %s" % \
             self.proxyType
