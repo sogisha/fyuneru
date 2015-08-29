@@ -47,7 +47,7 @@ class ProxyConfig:
             'shadowsocks',
             self.__baseKey,
             hashlib.sha256
-        ).digest().encode('base64')
+        ).digest().encode('base64').strip()
         proxyCommand = []
         if mode == 's':
             proxyCommand += [
@@ -55,18 +55,22 @@ class ProxyConfig:
                 '-k', sharedsecret,
                 '-m', 'aes-256-cfb',
                 '-s', self.proxyConfig["server"]["ip"],
-                '-p', self.proxyConfig["server"]["port"],
+                '-p', str(self.proxyConfig["server"]["port"]),
             ]
         else:
             proxyCommand += [
                 os.path.join(self.__proxyBase, 'shadowsocks', 'client.py'),
                 '-k', sharedsecret,
                 '-s', self.proxyConfig["server"]["ip"],
-                '-p', self.proxyConfig["server"]["port"],
+                '-p', str(self.proxyConfig["server"]["port"]),
                 '-b', '127.0.0.1',
-                '-l', self.proxyConfig["config"]["port"],
+                '-l', str(self.proxyConfig["client"]["port"]),
                 '-m', 'aes-256-cfb',
+                str(self.portClient), # local  udp listening port
+                '127.0.0.1',          # remote udp listening addr
+                str(self.portServer), # remote udp listening port
             ]
+        return proxyCommand
 
     def __init__(self, **args):
         if args.has_key("base"):
