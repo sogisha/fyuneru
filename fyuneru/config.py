@@ -3,6 +3,8 @@
 from distutils.version import StrictVersion
 from json import loads
 
+from proxyconf import ProxyConfig
+
 VERSION_REQUIREMENT = "1.0" # required version of `config.json`
 
 ##############################################################################
@@ -66,8 +68,13 @@ class Configuration:
         proxyConfig = proxy["config"]
         proxyServerUDPPort = proxy["ports"]["server"]
         proxyClientUDPPort = proxy["ports"]["client"]
-
-        return None # XXX TODO return accordingly generated command for initiating this proxy
+        proxyType = proxyConfig["type"]
+        return ProxyConfig(\
+            type=proxyType, 
+            serverPort=proxyServerUDPPort,
+            clientPort=proxyClientUDPPort,
+            config=proxyConfig
+        )
 
     def __init__(self, config):
         # try load the configuration file string, and parse into JSON.
@@ -107,5 +114,11 @@ class Configuration:
 ##############################################################################
 
 if __name__ == "__main__":
-    config = Configuration(open('./config.json', 'r').read())
-    print config
+    j = open('../config.json', 'r').read()
+    #print j
+    config = Configuration(j)
+    lst = config.listProxies()
+    for n in lst:
+        proxyConfig = config.getProxyConfig(n)
+        print proxyConfig.getInitCommand('s')
+        print proxyConfig.getInitCommand('c')

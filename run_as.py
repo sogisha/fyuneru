@@ -68,26 +68,6 @@ coreCommand += [str(i) for i in UDP_PORTS]
 proxyCommands = []
 proxyConfig = config["proxies"]
 
-if proxyConfig.has_key("websocket"):
-    proxyCommandWebsocket = ['node']
-    if MODE == 's':
-        proxyCommandWebsocket += [
-            './proxies/websocket/server.js', 
-            str(proxyConfig["websocket"]["server"]["webport"]),
-        ]
-        proxyCommandWebsocket += \
-            [str(i) for i in proxyConfig["websocket"]["server"]["coreports"]]
-    else:
-        proxyCommandWebsocket += [
-            './proxies/websocket/client.js', 
-            "%s:%s" % (
-                str(proxyConfig["websocket"]["server"]["ip"]),
-                str(proxyConfig["websocket"]["server"]["webport"]),
-            ),
-        ]
-        proxyCommandWebsocket += \
-            [str(i) for i in proxyConfig["websocket"]["client"]["coreports"]]
-    proxyCommands.append(proxyCommandWebsocket)
 
 ##############################################################################
 
