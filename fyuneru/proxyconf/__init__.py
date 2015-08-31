@@ -34,10 +34,7 @@ class ProxyConfig:
         else:
             proxyCommand += [
                 os.path.join(self.__proxyBase, 'websocket', 'client.js'),
-                "%s:%s" % (
-                    str(self.proxyConfig["server"]["ip"]),
-                    str(self.proxyConfig["server"]["port"]),
-                ),
+                self.proxyConfig["client"]["url"],
             ]
             proxyCommand.append(str(self.portClient))
         return proxyCommand
