@@ -50,6 +50,8 @@ class Configuration:
     def __loadProxyAllocations(self, core, proxies):
         # get and validate proxy and ports allocations
         self.__proxies = {}
+        self.__coreServerPorts = []
+        self.__coreClientPorts = []
 
         udpAllocations = core["udpalloc"]
         for allocName in udpAllocations:
@@ -66,6 +68,8 @@ class Configuration:
                 },
                 "config": proxyConfig
             }
+            self.__coreServerPorts.append(allocConfig["server"])
+            self.__coreClientPorts.append(allocConfig["client"])
 
     def listProxies(self):
         return self.__proxies.keys()
@@ -85,6 +89,25 @@ class Configuration:
             config=proxyConfig,
             key=self.key
         )
+
+    def getCoreCommand(self, mode, debug=False):
+        if mode == 's':
+            role = 'server'
+            ports = self.__coreServerPorts
+        else:
+            role = 'client'
+            ports = self.__coreClientPorts
+        coreCommand = [\
+            'python', 'tunnel.py',
+            '--role', role, 
+            '--server-ip', self.serverIP,
+            '--client-ip', self.clientIP,
+            '--key', self.key,
+        ]
+        coreCommand += [str(i) for i in ports]
+        if debug:
+            coreCommand.append('--debug')
+        return coreCommand
 
     def __init__(self, config):
         # try load the configuration file string, and parse into JSON.

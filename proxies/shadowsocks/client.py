@@ -2,8 +2,14 @@ import argparse
 from select import select
 import subprocess
 import socket
+import signal
+import time
 
 import socksproxy
+
+
+def log(x):
+    print "proxy-shadowsocks-client: %s" % x
 
 UDPCONNECTOR_WORD = \
     "Across the Great Wall, we can reach every corner in the world."
@@ -30,28 +36,91 @@ args = parser.parse_args()
 
 ##############################################################################
 
+sslocal = subprocess.Popen([
+    'sslocal',
+    '-k', args.k,
+    '-s', args.s,
+    '-p', str(args.p),
+    '-b', args.b,
+    '-l', str(args.l),
+    '-m', args.m,
+])
+print "sslocal -k **** -s %s -p %d -b %s -l %d -m %s" % (\
+    args.s,
+    args.p,
+    args.b,
+    args.l,
+    args.m
+)
+
+##############################################################################
+
 proxySocket = socksproxy.socksocket(socket.AF_INET, socket.SOCK_DGRAM)
 localSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 proxySocket.set_proxy(socksproxy.SOCKS5, args.b, args.l)
+log("Proxy to remote server: %s:%d" % (args.b, args.l))
 
-proxySocket.bind()
-localSocket.bind()
+#proxySocket.bind()
+#localSocket.bind()
 
 localConnected = False
 remoteConnected = False
 
 localPeer = ("127.0.0.1", args.LOCAL)
-remotePeer = ("127.0.0.1", args.REMOTE)
+remotePeer = (args.REMOTEADDR, args.REMOTE)
+
+##############################################################################
+
+def doExit(signum, frame):
+    global localSocket, proxySocket, sslocal 
+    try:
+        localSocket.close()
+    except:
+        pass
+    try:
+        proxySocket.close()
+    except:
+        pass
+    try:
+        sslocal.terminate()
+    except:
+        pass
+    log("exit now.")
+    exit()
+signal.signal(signal.SIGTERM, doExit)
+
+##############################################################################
 
 while True:
-    if not localConnected:
-        localSocket.send(UDPCONNECTOR_WORD, localPeer)
-    if not remoteConnected:
-        proxySocket.send(UDPCONNECTOR_WORD, remotePeer)
+    try:
+        if not localConnected:
+            localSocket.sendto(UDPCONNECTOR_WORD, localPeer)
+            log("Trying to connect local socket at: %s:%d" % localPeer)
+            time.sleep(0.5)
+        if not remoteConnected:
+            proxySocket.sendto(UDPCONNECTOR_WORD, remotePeer)
+            log("Trying to connect remote socket at %s:%d" % remotePeer)
+            time.sleep(0.5)
 
-    readables = select([localSocket, proxySocket], [], [])[0][0]
+        selected = select([localSocket, proxySocket], [], [], 1.0)
+        if len(selected) < 1:
+            continue
+        readables = selected[0]
 
-    for each in readables:
-        buf, sender = each.recvfrom(65536)
-
+        for each in readables:
+            buf, sender = each.recvfrom(65536)
+            if buf.strip() == UDPCONNECTOR_WORD:
+                if each == localSocket:
+                    localConnected = True
+                    log("Local socket connected.")
+                if each == proxySocket:
+                    remoteConnected = True
+                    log("Remote socket connected.")
+            else:
+                if each == localSocket:
+                    proxySocket.write(buf)
+                if each == proxySocket:
+                    localSocket.write(buf)
+    except KeyboardInterrupt:
+        doExit(None, None)

@@ -48,9 +48,8 @@ class ProxyConfig:
             self.__baseKey,
             hashlib.sha256
         ).digest().encode('base64').strip()
-        proxyCommand = []
         if mode == 's':
-            proxyCommand += [
+            proxyCommand = [
                 'ssserver',
                 '-k', sharedsecret,
                 '-m', 'aes-256-cfb',
@@ -58,7 +57,8 @@ class ProxyConfig:
                 '-p', str(self.proxyConfig["server"]["port"]),
             ]
         else:
-            proxyCommand += [
+            proxyCommand = [
+                'python',
                 os.path.join(self.__proxyBase, 'shadowsocks', 'client.py'),
                 '-k', sharedsecret,
                 '-s', self.proxyConfig["server"]["ip"],
