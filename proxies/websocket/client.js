@@ -34,4 +34,7 @@ socket.once('connect', function(){
         var i = Math.floor(UDPPorts.length * Math.random());
         UDPPorts[i].send(data);
     });
+    socket.on('greeting', function(){
+        console.log("Received greeting message from server.");
+    });
 });
