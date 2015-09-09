@@ -13,7 +13,7 @@ for(var i=0; i<PORTS.length; i++) PORTS[i] = parseInt(PORTS[i], 10);
 
 var io = require('socket.io-client');
 var SERVERURL = SERVERURL;
-var socket = io(SERVERURL, {path: url.parse(SERVERURL).path});
+var socket = io(SERVERURL); //, {path: url.parse(SERVERURL).path});
 var UDPAutoConnector = require('./udpAutoConnector');
 
 console.log("Connecting to server: " + SERVERURL);
