@@ -10,6 +10,7 @@ import sys
 
 from fyuneru.procmgr import ProcessManager 
 from fyuneru.config import Configuration
+from fyuneru.droproot import dropRoot
 
 
 parser = argparse.ArgumentParser(description="""
@@ -41,7 +42,11 @@ MODE = args.mode
 
 config = Configuration(open(os.path.join(PATH, 'config.json'), 'r').read())
 
-coreCommand = config.getCoreCommand(MODE, debug=bool(args.debug))
+coreCommand = config.getCoreCommand(\
+    MODE,
+    config.user,
+    debug=bool(args.debug)
+)
 
 proxyCommands = {} 
 for proxyName in config.listProxies():
@@ -59,6 +64,7 @@ try:
     print "Start core process..."
     print " ".join(coreCommand)
     processes.new('core', coreCommand)
+    dropRoot(*config.user)
 
     # ---------- start proxies
 

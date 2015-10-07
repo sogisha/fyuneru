@@ -47,6 +47,13 @@ class Configuration:
         self.serverIP = core["server"]["ip"]
         self.clientIP = core["client"]["ip"]
 
+        # get UID/GID names
+        if not core["user"].has_key('uidname'):
+            raise ConfigFileException("core.user.uidname must be specified.")
+        if not core["user"].has_key('gidname'):
+            raise ConfigFileException("core.user.gidname must be specified.")
+        self.user = (core["user"]["uidname"], core["user"]["gidname"])
+
     def __loadProxyAllocations(self, core, proxies):
         # get and validate proxy and ports allocations
         self.__proxies = {}
@@ -90,7 +97,11 @@ class Configuration:
             key=self.key
         )
 
-    def getCoreCommand(self, mode, debug=False):
+    def getCoreCommand(self, mode, user, debug=False):
+        """Generates a command for starting `tunnel.py`.
+        * `mode`: either `s` for server, or `c` for client.
+        * `user`: (str, str), for (uid-name, gid-name), as which the program
+                  will run after root privileges is no more necessary."""
         if mode == 's':
             role = 'server'
             ports = self.__coreServerPorts
@@ -99,6 +110,8 @@ class Configuration:
             ports = self.__coreClientPorts
         coreCommand = [\
             'python', 'tunnel.py',
+            '--uidname', user[0],
+            '--gidname', user[1],
             '--role', role, 
             '--server-ip', self.serverIP,
             '--client-ip', self.clientIP,
@@ -133,6 +146,7 @@ class Configuration:
             jsonCore, 
             'server',
             'client',
+            'user',
             'key',
             'udpalloc'
         ):

@@ -12,13 +12,28 @@ from time import time
 from pytun import TunTapDevice
 
 from fyuneru.crypto import Crypto
-from _debug import showPacket
+from fyuneru.debug import showPacket
+from fyuneru.droproot import dropRoot
+
+##############################################################################
 
 parser = argparse.ArgumentParser()
 parser.add_argument(\
     "--debug",
     action="store_true",
     default=False
+)
+parser.add_argument(\
+    "--uidname",
+    metavar="UID_NAME",
+    type=str,
+    required=True
+)
+parser.add_argument(\
+    "--gidname",
+    metavar="GID_NAME",
+    type=str,
+    required=True
 )
 parser.add_argument(\
     "--role",
@@ -99,6 +114,11 @@ log(\
 tun.up()
 log("%s: up now." % tun.name)
 
+# ---------- drop root privileges
+
+uidname, gidname = args.uidname, args.gidname
+dropRoot(uidname, gidname)
+
 # ---------- open UDP sockets
 
 reads = [tun] # for `select` function
@@ -115,8 +135,6 @@ for portNum in UDP_PORTS:
     sendingTimings.append(0)
 
 log("UDP: open ports %s" % ", ".join([str(i) for i in UDP_PORTS]))
-
-# TODO drop root
 
 ##############################################################################
 
