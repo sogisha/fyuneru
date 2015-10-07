@@ -11,12 +11,12 @@
 
 5. 考虑一种控制协议，可以通过上一条所述方式控制服务器端程序
 
-6. 检测是否有root权限及在启动TUN后放弃root权限
+6. 检测是否有root权限及在启动TUN后放弃root权限[done]
 
 7. config.json 修改，直接对（服务器-客户机）端口对进行配置，并针对每个端口对传
-   递具体代理程序的情况。
+   递具体代理程序的情况。[done]
 
-8. config.json 加入version键，判断config.json是否兼容于本版本的程序。
+8. config.json 加入version键，判断config.json是否兼容于本版本的程序。[done]
 
 9. 在Debug模式输出中，用图显示本地各端口的延时情况。
 
