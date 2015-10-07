@@ -32,6 +32,7 @@ function newSocketConnection(socket){
         var i = Math.floor(UDPPorts.length * Math.random());
         UDPPorts[i].send(data);
     });
+    socket.emit('greeting', {});
 }
 
 io.on('connection', newSocketConnection);

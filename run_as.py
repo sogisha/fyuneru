@@ -9,6 +9,7 @@ import subprocess
 import sys
 
 from fyuneru.procmgr import ProcessManager 
+from fyuneru.config import Configuration
 
 
 parser = argparse.ArgumentParser(description="""
@@ -38,59 +39,13 @@ MODE = args.mode
 
 ##############################################################################
 
-config = json.loads(open(os.path.join(PATH, 'config.json'), 'r').read())
+config = Configuration(open(os.path.join(PATH, 'config.json'), 'r').read())
 
-KEY = config["core"]["key"]
-CLIENT_VIRTUAL_IP = config["core"]["client"]["ip"]
-CLIENT_UDP_PORTS = config["core"]["client"]["ports"]
-SERVER_VIRTUAL_IP = config["core"]["server"]["ip"]
-SERVER_UDP_PORTS = config["core"]["server"]["ports"]
-
-if MODE == 's':
-    UDP_PORTS = SERVER_UDP_PORTS
-    ROLE = 'server'
-else:
-    UDP_PORTS = CLIENT_UDP_PORTS
-    ROLE = 'client'
-
-# ---------- core command
-
-coreCommand = [\
-    'python', 'tunnel.py',
-    '--role', ROLE, 
-    '--server-ip', SERVER_VIRTUAL_IP,
-    '--client-ip', CLIENT_VIRTUAL_IP,
-    '--key', KEY,
-]
-if args.debug:
-    coreCommand += ['--debug']
-coreCommand += [str(i) for i in UDP_PORTS]
-
-# ---------- proxy commands
+coreCommand = config.getCoreCommand(MODE, debug=bool(args.debug))
 
 proxyCommands = []
-proxyConfig = config["proxies"]
-
-if proxyConfig.has_key("websocket"):
-    proxyCommandWebsocket = ['node']
-    if MODE == 's':
-        proxyCommandWebsocket += [
-            './proxies/websocket/server.js', 
-            str(proxyConfig["websocket"]["server"]["webport"]),
-        ]
-        proxyCommandWebsocket += \
-            [str(i) for i in proxyConfig["websocket"]["server"]["coreports"]]
-    else:
-        proxyCommandWebsocket += [
-            './proxies/websocket/client.js', 
-            "%s:%s" % (
-                str(proxyConfig["websocket"]["server"]["ip"]),
-                str(proxyConfig["websocket"]["server"]["webport"]),
-            ),
-        ]
-        proxyCommandWebsocket += \
-            [str(i) for i in proxyConfig["websocket"]["client"]["coreports"]]
-    proxyCommands.append(proxyCommandWebsocket)
+for proxyName in config.listProxies():
+    proxyCommands.append(config.getProxyConfig(proxyName).getInitCommand(MODE))
 
 ##############################################################################
 
@@ -99,12 +54,16 @@ processes = ProcessManager()
 try:
     # ---------- start core
     
+    print "Start core process..."
+    print " ".join(coreCommand)
     processes.new('core', coreCommand)
 
     # ---------- start proxies
 
+    print "Starting proxy process..."
     processProxies = []
     for cmd in proxyCommands:
+        print " ".join(cmd)
         processProxies.append(subprocess.Popen(cmd))
 
     # ---------- deal with exiting and cleaning
@@ -129,7 +88,8 @@ try:
 
     processCore.wait()
 
-except:
+except Exception,e:
+    print e
     pass
 
 finally:

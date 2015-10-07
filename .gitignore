@@ -1,5 +1,5 @@
 *.sw?
 *.pyc
 test.*
-config.json
+config*.json
 *.odg
