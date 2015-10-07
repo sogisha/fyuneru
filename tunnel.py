@@ -11,7 +11,6 @@ from time import time
 
 from pytun import TunTapDevice
 
-from fyuneru import config
 from fyuneru.crypto import Crypto
 from _debug import showPacket
 

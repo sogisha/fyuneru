@@ -24,10 +24,13 @@ class ProcessManager:
                 self.kill(each, True)
 
     def kill(self, name, force=False):
-        if force:
-            self.__processes[name].kill()
-        else:
-            self.__processes[name].terminate()
+        try:
+            if force:
+                self.__processes[name].kill()
+            else:
+                self.__processes[name].terminate()
+        except Exception,e:
+            pass
 
     def wait(self, name):
         self.__processes[name].wait()
