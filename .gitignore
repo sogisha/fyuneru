@@ -2,4 +2,5 @@
 *.pyc
 test.*
 config*.json
+!config.dev.json
 *.odg

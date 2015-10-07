@@ -1,0 +1,40 @@
+{
+    "version": "1.0",
+    "core": {
+        "server": {
+            "ip": "10.1.0.1"
+        },
+        "client": {
+            "ip": "10.1.0.2"
+        },
+        "user": {
+            "uidname": "nobody",
+            "gidname": "nobody"
+        },
+        "key": "DEVELOPMENT ONLY",
+        "udpalloc": {
+            "proxy-ss-01": {"server": 17100, "client": 7100}
+        }
+    },
+    "proxies": {
+        "proxy-ws-01": {
+            "type": "websocket",
+            "server": {
+                "port": 7501 
+            },
+            "client": {
+                "url": "ws://127.0.0.1/login/"
+            }
+        },
+        "proxy-ss-01": {
+            "type": "shadowsocks",
+            "server": {
+                "ip": "127.0.0.1",
+                "port": 31000
+            },
+            "client": {
+                "port": 10080
+            }
+        }
+    }
+}
