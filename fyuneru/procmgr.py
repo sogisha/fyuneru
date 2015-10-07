@@ -13,20 +13,21 @@ class ProcessManager:
 
     def new(self, name, cmd):
         proc = subprocess.Popen(cmd)
-        __processes[name] = proc
+        self.__processes[name] = proc
 
-    def killall(self):
+    def killall(self, tolerance=1.0):
         for each in self.__processes:
             self.kill(each, False)
-        time.sleep(0.5)
+        time.sleep(tolerance)
         for each in self.__processes:
             if None == self.__processes[each]:
                 self.kill(each, True)
 
     def kill(self, name, force=False):
-        if not self.__processes.has_key(name):
-            return
         if force:
             self.__processes[name].kill()
         else:
             self.__processes[name].terminate()
+
+    def wait(self, name):
+        self.__processes[name].wait()

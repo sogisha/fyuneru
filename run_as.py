@@ -43,17 +43,19 @@ config = Configuration(open(os.path.join(PATH, 'config.json'), 'r').read())
 
 coreCommand = config.getCoreCommand(MODE, debug=bool(args.debug))
 
-proxyCommands = []
+proxyCommands = {} 
 for proxyName in config.listProxies():
-    proxyCommands.append(config.getProxyConfig(proxyName).getInitCommand(MODE))
+    proxyCommands[proxyName] = \
+        config.getProxyConfig(proxyName).getInitCommand(MODE)
 
 ##############################################################################
 
 processes = ProcessManager()
 
 try:
+
     # ---------- start core
-    
+
     print "Start core process..."
     print " ".join(coreCommand)
     processes.new('core', coreCommand)
@@ -62,31 +64,32 @@ try:
 
     print "Starting proxy process..."
     processProxies = []
-    for cmd in proxyCommands:
-        print " ".join(cmd)
-        processProxies.append(subprocess.Popen(cmd))
+    for proxyName in proxyCommands:
+        proxyCommand = proxyCommands[proxyName]
+        print " ".join(proxyCommand)
+        processes.new(proxyName, proxyCommand)
 
     # ---------- deal with exiting and cleaning
 
     def doExit(signum, frame):
-        global processCore, processProxies
-        print "Exit now."
+        global processes 
+        t = 1.0 # second(s) waiting for exit
         try:
-            processCore.terminate()
-        except:
-            pass
-        for each in processProxies:
-            try:
-                each.terminate()
-            except:
-                pass
-        exit()
+            processes.killall(t)
+            print "Exiting. Wait %f seconds for child processes to exit." % t
+        except Exception,e:
+            print "Exiting, error: %s" % e
+        print "Good bye."
+        sys.exit()
     signal.signal(signal.SIGTERM, doExit)
     signal.signal(signal.SIGINT, doExit)
 
     # ---------- wait for the core process
 
-    processCore.wait()
+    processes.wait('core')
+
+except KeyboardInterrupt:
+    doExit(None, None)
 
 except Exception,e:
     print e
