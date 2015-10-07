@@ -4,6 +4,11 @@ import signal
 import subprocess
 import time
 
+
+class ProcessManagerException(Exception):
+    pass
+
+
 class ProcessManager:
 
     __processes = {}
@@ -12,6 +17,9 @@ class ProcessManager:
         signal.signal(signal.SIGTERM, self.killall)
 
     def new(self, name, cmd):
+        if self.__processes.has_key(name):
+            raise ProcessManagerException(\
+                "Child process already registered with name [%s]" % name)
         proc = subprocess.Popen(cmd)
         self.__processes[name] = proc
 
