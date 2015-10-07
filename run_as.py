@@ -8,6 +8,9 @@ import signal
 import subprocess
 import sys
 
+from fyuneru.procmgr import ProcessManager 
+
+
 parser = argparse.ArgumentParser(description="""
     This is the initator of Fyeneru proxy. Before running, put a `config.json`
     in the same path as this file.
@@ -91,10 +94,12 @@ if proxyConfig.has_key("websocket"):
 
 ##############################################################################
 
+processes = ProcessManager()
+
 try:
     # ---------- start core
     
-    processCore = subprocess.Popen(coreCommand)
+    processes.new('core', coreCommand)
 
     # ---------- start proxies
 
