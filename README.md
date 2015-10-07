@@ -1,6 +1,14 @@
 Fyuneru
 =======
 
+```
+Currently under heavy development, documentation errors are not corrected.
+Newest code will highly possible not work out-of-box.
+
+当前正在进行大量的修改，文档错误也没有改正。
+最新的代码很可能无法工作。
+```
+
 **向下拉动，见简体中文版本。**
 
 **Fyuneru** lets you set up a server and a client computer within a virtual
@@ -76,45 +84,54 @@ Install Fyuneru on both your server and your client. Before running, create a
 file named `config.json` and place it in the same folder as the `run_as.py`.
 Both server and client needs such a file, make sure they're **identical**.
 
-An example of `config.json` is below. Do not remove any entry, just modify
-their value if desired.
+An example of `config.json` is below.
 
 ```
 {
+    "version": "1.0",
     "core": {
         "server": {
-            "ip": "10.1.0.1",
-            "ports": [17100,17101,17102,17103,17104]
+            "ip": "10.1.0.1"
         },
         "client": {
-            "ip": "10.1.0.2",
-            "ports": [7100,7101,7102,7103,7104]
+            "ip": "10.1.0.2"
         },
-        "key": "<USE A RANDOM AND LONG KEY TO REPLACE THIS>"
+        "key": "<USE A RANDOM AND LONG KEY TO REPLACE THIS>",
+        "udpalloc": {
+            "proxy-ss-01": {"server": 17100, "client": 7100}
+        }
     },
     "proxies": {
-        "websocket": {
+        "proxy-ws-01": {
+            "type": "websocket",
             "server": {
-                "ip": "<ADDRESS OF THE SERVER RUNNING PROXY>",
-                "webport": 6000,
-                "coreports": [17100, 17101]
+                "port": 7501 
             },
             "client": {
-                "coreports": [7100, 7101]
+                "url": "ws://127.0.0.1/login/"
+            }
+        },
+        "proxy-ss-01": {
+            "type": "shadowsocks",
+            "server": {
+                "ip": "127.0.0.1",
+                "port": 31000
+            },
+            "client": {
+                "port": 10080
             }
         }
     }
 }
 ```
 
-Explanations to the configurations for the core.
+Explanations to the configurations for the `core` section.
 
 1. Set `core.server.ip` and `core.client.ip` as the desired virtual IP
    addresses for both computers.
-1. `core.server.ports` and `core.client.ports` are arrays containing a series
-   of port numbers. They are the ports used by proxies.
-1. Remeber to change `core.key` to a long key consists of random characters.
-   This is cricital to your security.
+1. `core.key` must be random and unique for your own security.
+1. `core.udpalloc` defines interal UDP port allocations between proxy processes
+   and core process.
 
 To configure using a specific type of proxy, specify parameters in `proxies`
 section.
@@ -215,51 +232,58 @@ Fyuneru有两个部分：核心，和一系列代理。
 
 ## 用法
 
-### 配置
+将Fyuneru安装在您的服务器和客户端上。运行前，创建一个叫做`config.json`的文件，
+将它放在`run_as.py`相同的目录下。服务器和客户端都需要这样一个文件，
+而且他们必须是**完全一样**的。
 
-Fyuneru需要首先安装在服务器和客户端上。
-在运行前，在`run_as.py`相同的路径下创建`config.json`文件。
-服务器和客户端都需要这样一个文件，他们必须**完全相同**。
-
-`config.json`文件的内容如下。请不要删除任何条目，只按照需要修改他们的值。
+`config.json`的示例如下。
 
 ```
 {
+    "version": "1.0",
     "core": {
         "server": {
-            "ip": "10.1.0.1",
-            "ports": [17100,17101,17102,17103,17104]
+            "ip": "10.1.0.1"
         },
         "client": {
-            "ip": "10.1.0.2",
-            "ports": [7100,7101,7102,7103,7104]
+            "ip": "10.1.0.2"
         },
-        "key": "<在这里输入一个很长而随机的密钥>"
+        "key": "<USE A RANDOM AND LONG KEY TO REPLACE THIS>",
+        "udpalloc": {
+            "proxy-ss-01": {"server": 17100, "client": 7100}
+        }
     },
     "proxies": {
-        "websocket": {
+        "proxy-ws-01": {
+            "type": "websocket",
             "server": {
-                "ip": "<运行着这个代理的服务器的地址>",
-                "webport": 6000,
-                "coreports": [17100, 17101]
+                "port": 7501 
             },
             "client": {
-                "coreports": [7100, 7101]
+                "url": "ws://127.0.0.1/login/"
+            }
+        },
+        "proxy-ss-01": {
+            "type": "shadowsocks",
+            "server": {
+                "ip": "127.0.0.1",
+                "port": 31000
+            },
+            "client": {
+                "port": 10080
             }
         }
     }
 }
 ```
 
-对上述文件的核心（core）部分的解释：
+对`core`部分的解释：
 
-1. `core.server.ip`和`core.client.ip`分别是预计分配给服务器和客户端的虚拟网卡的IP地址。
-1. `core.server.ports`和`core.client.ports`是一系列端口号的数组。
-   代理将在这些端口号上与核心交互。
-1. 务必记住修改`core.key`的值，使之为一个很长而随机的口令。
-   这对于您的安全是十分重要的。
+1. 设置`core.server.ip`和`core.client.ip`为服务器和客户端所用的虚拟IP地址。
+1. `core.key`必须是随机生成的、唯一的密钥（这对你的安全十分重要）。
+1. `core.udpalloc`定义了用于核心进程和代理进程之间的UDP段口号分配。
 
-为了配置具体一个代理，需要在`proxies`部分中设定参数。
+为了配置具体的代理程序，要在`proxies`节中指定特定的参数。
 
 #### 配置一个WebSocket代理
 
