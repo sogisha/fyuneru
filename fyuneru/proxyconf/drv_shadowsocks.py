@@ -9,18 +9,23 @@ def proxyCommand(self, mode):
         self.baseKey,
         hashlib.sha256
     ).digest().encode('base64').strip()
+    serverBinary = self.proxyConfig["server"]["bin"]
+    clientBinary = self.proxyConfig["client"]["bin"]
+
     if mode == 's':
         proxyCommand = [
-            'ssserver',
+            serverBinary,
             '-k', sharedsecret,
             '-m', 'aes-256-cfb',
             '-s', self.proxyConfig["server"]["ip"],
             '-p', str(self.proxyConfig["server"]["port"]),
+            '-U',
         ]
     else:
         proxyCommand = [
             'python',
             os.path.join(self.proxyBase, 'shadowsocks', 'client.py'),
+            '--bin', clientBinary,
             '-k', sharedsecret,
             '-s', self.proxyConfig["server"]["ip"],
             '-p', str(self.proxyConfig["server"]["port"]),

@@ -16,6 +16,8 @@ UDPCONNECTOR_WORD = \
 
 parser = argparse.ArgumentParser()
 
+# use the binary executable specified
+parser.add_argument("--bin", type=str, default="/usr/local/bin/ss-tunnel")
 # following -? arguments are for process `sslocal`
 parser.add_argument("-k", type=str) # key
 parser.add_argument("-s", type=str) # server addr
@@ -36,16 +38,21 @@ args = parser.parse_args()
 
 ##############################################################################
 
+
 sslocal = subprocess.Popen([
-    'sslocal',
-    '-k', args.k,
-    '-s', args.s,
-    '-p', str(args.p),
-    '-b', args.b,
-    '-l', str(args.l),
-    '-m', args.m,
+    args.bin,                                       # shadowsocks-libev
+    '-U',                                           # UDP relay only
+    '-L', "%s:%d" % (args.REMOTEADDR, args.REMOTE), # destinating UDP addr
+    '-k', args.k,                                   # key
+    '-s', args.s,                                   # server host
+    '-p', str(args.p),                              # server port
+    '-b', args.b,                                   # local addr
+    '-l', str(args.l),                              # local port
+    '-m', args.m,                                   # encryption method
 ])
-print "sslocal -k **** -s %s -p %d -b %s -l %d -m %s" % (\
+print "ss-tunnel -U -L %s:%d -k **** -s %s -p %d -b %s -l %d -m %s" % (\
+    args.REMOTEADDR,
+    args.REMOTE,
     args.s,
     args.p,
     args.b,
@@ -55,11 +62,11 @@ print "sslocal -k **** -s %s -p %d -b %s -l %d -m %s" % (\
 
 ##############################################################################
 
-proxySocket = socksproxy.socksocket(socket.AF_INET, socket.SOCK_DGRAM)
+#proxySocket = socksproxy.socksocket(socket.AF_INET, socket.SOCK_DGRAM)
+proxySocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 localSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-proxySocket.set_proxy(socksproxy.SOCKS5, args.b, args.l)
-log("Proxy to remote server: %s:%d" % (args.b, args.l))
+#proxySocket.set_proxy(socksproxy.SOCKS5, args.b, args.l)
 
 #proxySocket.bind()
 #localSocket.bind()
@@ -68,7 +75,8 @@ localConnected = False
 remoteConnected = False
 
 localPeer = ("127.0.0.1", args.LOCAL)
-remotePeer = (args.REMOTEADDR, args.REMOTE)
+#remotePeer = (args.REMOTEADDR, args.REMOTE)
+remotePeer = (args.b, args.l)
 
 ##############################################################################
 

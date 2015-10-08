@@ -29,10 +29,12 @@
         "proxy-ss-01": {
             "type": "shadowsocks",
             "server": {
+                "bin": "/usr/local/bin/ss-server",
                 "ip": "127.0.0.1",
                 "port": 31000
             },
             "client": {
+                "bin": "/usr/local/bin/ss-tunnel",
                 "port": 10080
             }
         }
