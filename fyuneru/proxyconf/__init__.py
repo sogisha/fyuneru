@@ -46,12 +46,9 @@ class ProxyConfig:
         if not mode in ['s', 'c']:
             raise ProxyConfigException("Mode should be either 'c' or 's'.")
 
-        if self.proxyType == 'websocket':
-            return proxyCommands['websocket'](self, mode)
+        if proxyCommands.has_key(self.proxyType):
+            return proxyCommands[self.proxyType](self, mode)
 
-        if self.proxyType == 'shadowsocks':
-            return proxyCommands['shadowsocks'](self, mode)
-        
         raise ProxyConfigException("Unsupported proxy type: %s" % \
             self.proxyType
         )
