@@ -127,8 +127,8 @@ while True:
                     log("Remote socket connected.")
             else:
                 if each == localSocket:
-                    proxySocket.write(buf)
+                    proxySocket.sendto(buf, remotePeer) #write(buf)
                 if each == proxySocket:
-                    localSocket.write(buf)
+                    localSocket.sendto(buf, localPeer) #(buf)
     except KeyboardInterrupt:
         doExit(None, None)

@@ -198,7 +198,7 @@ while True:
             # unpack buf with timestamp
             if(len(buf) < 8):
                 continue
-            bufTimestamp = unpack('<d', buf[:8])
+            bufTimestamp = unpack('<d', buf[:8])[0]
             buf = buf[8:]
             receivingTimings[i] = max(receivingTimings[i], bufTimestamp)
             # send buf to network interface
