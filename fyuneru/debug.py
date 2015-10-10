@@ -1,6 +1,17 @@
 import socket
 from struct import * 
 
+def colorify(text, color):
+    colors = {\
+        "blue": '\033[94m',
+        "green": '\033[92m',
+        "red": '\033[91m',
+    }
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    return colors[color] + text + ENDC
+
 def _decodeIPFrame(buf):
     ip_header = buf[0:20]
     iph = unpack('!BBHHHBBH4s4s' , ip_header)

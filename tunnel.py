@@ -12,7 +12,7 @@ from time import time
 from pytun import TunTapDevice
 
 from fyuneru.crypto import Crypto
-from fyuneru.debug import showPacket
+from fyuneru.debug import showPacket, colorify
 from fyuneru.droproot import dropRoot
 
 ##############################################################################
@@ -166,12 +166,12 @@ while True:
             sendingTimings[i] = bufTimestamp
             # encrypt and sign buf
             workerSocket.sendto(encrypt(buf), peers[i])
-            debug("[%f] %s --> [%d]\n%s\n" % (\
+            debug(colorify("[%f] %s --> [%d]\n%s\n" % (\
                 sendingTimings[i],
                 tun.name,
                 i,
                 showPacket(buf)
-            ))
+            ), 'green'))
 
         else:
             
@@ -203,9 +203,9 @@ while True:
             receivingTimings[i] = max(receivingTimings[i], bufTimestamp)
             # send buf to network interface
             tun.write(buf)
-            debug("[%f]: [%d] --> %s\n%s\n" % (\
+            debug(colorify("[%f]: [%d] --> %s\n%s\n" % (\
                 receivingTimings[i],
                 i,
                 tun.name,
                 showPacket(buf)
-            ))
+            ), 'red'))
