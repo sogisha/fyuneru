@@ -5,15 +5,14 @@ import argparse
 from select import select
 import signal
 import socket
-from struct import pack, unpack
 import random
-from time import time
 
 from pytun import TunTapDevice
 
 from fyuneru.crypto import Crypto
 from fyuneru.debug import showPacket, colorify
 from fyuneru.droproot import dropRoot
+from fyuneru.protocol import DataPacket, DataPacketException
 
 ##############################################################################
 
@@ -161,11 +160,11 @@ while True:
             i = possible[random.randrange(0, len(possible))]
             workerSocket = reads[i + 1]
             # pack buf with timestamp
-            bufTimestamp = time()
-            buf = pack('<d', bufTimestamp) + buf
-            sendingTimings[i] = bufTimestamp
+            packet = DataPacket()
+            packet.data = buf
+            sendingTimings[i] = packet.timestamp 
             # encrypt and sign buf
-            workerSocket.sendto(encrypt(buf), peers[i])
+            workerSocket.sendto(encrypt(str(packet)), peers[i])
             debug(colorify("[%f] %s --> [%d]\n%s\n" % (\
                 sendingTimings[i],
                 tun.name,
@@ -190,22 +189,20 @@ while True:
 
             if peers[i] != sender:
                 continue
-            # decrypt buf
+            # decrypt buf and unpack
             buf = decrypt(buf)
-            if buf == False: # if decryption failed
-                debug("[%d] --> %s: Bad packet." % (i, tun.name))
+            try:
+                packet = DataPacket(buf)
+            except DataPacketException, e:
+                # if decryption failed
+                debug("[%d] --> %s: Bad packet - %s" % (i, tun.name, e))
                 continue
-            # unpack buf with timestamp
-            if(len(buf) < 8):
-                continue
-            bufTimestamp = unpack('<d', buf[:8])[0]
-            buf = buf[8:]
-            receivingTimings[i] = max(receivingTimings[i], bufTimestamp)
+            receivingTimings[i] = max(receivingTimings[i], packet.timestamp)
             # send buf to network interface
-            tun.write(buf)
+            tun.write(packet.data)
             debug(colorify("[%f]: [%d] --> %s\n%s\n" % (\
                 receivingTimings[i],
                 i,
                 tun.name,
-                showPacket(buf)
+                showPacket(packet.data)
             ), 'red'))

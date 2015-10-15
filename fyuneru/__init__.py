@@ -5,5 +5,6 @@ __all__ = [\
     "crypto",
     "debug",
     "droproot",
-    "procmgr"
+    "procmgr",
+    "protocol"
 ]
