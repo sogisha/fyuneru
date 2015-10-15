@@ -75,7 +75,6 @@ localConnected = False
 remoteConnected = False
 
 localPeer = ("127.0.0.1", args.LOCAL)
-#remotePeer = (args.REMOTEADDR, args.REMOTE)
 remotePeer = (args.b, args.l)
 
 ##############################################################################
