@@ -28,15 +28,16 @@
         },
         "proxy-ss-01": {
             "type": "shadowsocks",
-            "server": {
+            "tunnel-server": {
                 "bin": "/usr/local/bin/ss-server",
                 "ip": "127.0.0.1",
                 "port": 31000
             },
-            "client": {
+            "tunnel-client": {
                 "bin": "/usr/local/bin/ss-tunnel",
                 "port": 10080
-            }
+            },
+            "server": "127.0.0.1"
         }
     }
 }
