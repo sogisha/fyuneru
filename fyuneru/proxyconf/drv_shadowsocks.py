@@ -9,16 +9,16 @@ def proxyCommand(self, mode):
         self.baseKey,
         hashlib.sha256
     ).digest().encode('base64').strip()
-    serverBinary = self.proxyConfig["tunnel-server"]["bin"]
-    clientBinary = self.proxyConfig["tunnel-client"]["bin"]
+    serverBinary = self.proxyConfig["tunnel"]["binary"]["server"]
+    clientBinary = self.proxyConfig["tunnel"]["binary"]["client"]
 
     if mode == 's':
         proxyCommand = [
             serverBinary,
             '-k', sharedsecret,
             '-m', 'aes-256-cfb',
-            '-s', self.proxyConfig["tunnel-server"]["ip"],
-            '-p', str(self.proxyConfig["tunnel-client"]["port"]),
+            '-s', self.proxyConfig["tunnel"]["server"]["ip"],
+            '-p', str(self.proxyConfig["tunnel"]["server"]["port"]),
             '-U',
         ]
     else:
@@ -27,13 +27,13 @@ def proxyCommand(self, mode):
             os.path.join(self.proxyBase, 'shadowsocks', 'client.py'),
             '--bin', clientBinary,
             '-k', sharedsecret,
-            '-s', self.proxyConfig["tunnel-server"]["ip"],
-            '-p', str(self.proxyConfig["tunnel-server"]["port"]),
-            '-b', '127.0.0.1',
-            '-l', str(self.proxyConfig["tunnel-client"]["port"]),
+            '-s', self.proxyConfig["tunnel"]["server"]["ip"],
+            '-p', str(self.proxyConfig["tunnel"]["server"]["port"]),
+            '-b', self.proxyConfig["tunnel"]["client"]["ip"],
+            '-l', str(self.proxyConfig["tunnel"]["client"]["port"]),
             '-m', 'aes-256-cfb',
-            str(self.portClient),       # local  udp listening port
-            self.proxyConfig["server"], # remote udp listening addr
-            str(self.portServer),       # remote udp listening port
+            str(self.portClient),         # local  udp listening port
+            self.proxyConfig["entrance"], # remote udp listening addr
+            str(self.portServer),         # remote udp listening port
         ]
     return proxyCommand
