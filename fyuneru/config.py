@@ -14,7 +14,7 @@ from json import loads
 
 from proxyconf import ProxyConfig
 
-VERSION_REQUIREMENT = "1.0" # required version of `config.json`
+VERSION_REQUIREMENT = "1.1" # required version of `config.json`
 
 ##############################################################################
 

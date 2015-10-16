@@ -8,10 +8,14 @@ Packets of Fyuneru
 from struct import pack, unpack
 from time import time
 
-class DataPacketException(Exception):
-    pass
+SIGN_DATAPACKET = 0x01
 
 ##############################################################################
+
+# DataPacket
+
+class DataPacketException(Exception):
+    pass
 
 class DataPacket:
 
@@ -19,27 +23,33 @@ class DataPacket:
     data = ''
 
     def __unpack(self, buf):
-        if(len(buf) < 8):
-            raise DataPacketException("Not a valid packet. Length < 8.")
-        self.timestamp = unpack('<d', buf[:8])[0]
-        self.data = buf[8:]
+        if(len(buf) < 9):
+            raise DataPacketException("Not a valid data packet.")
+        sign, self.timestamp = unpack('<Bd', buf[:9])
+        if sign != SIGN_DATAPACKET:
+            raise DataPacketException("Not a valid data packet.")
+        self.data = buf[9:]
 
     def __str__(self):
         """Pack this packet into a string."""
-        bufTimestamp = pack('<d', self.timestamp)
-        return bufTimestamp + self.data
+        buf = pack('<Bd', SIGN_DATAPACKET, self.timestamp)
+        buf += self.data
+        return buf 
     
     def __init__(self, buf=None):
         """Read a packet with given `buf`, or construct an empty packet."""
         if None != buf:
             if type(buf) != str:
-                raise DataPacketException("Not a valid packet. Str expected.")
+                raise DataPacketException("Not a valid data packet.")
             self.__unpack(buf)
             return
         self.timestamp = time()
 
+##############################################################################
 
+# 
 
 if __name__ == '__main__':
     packet = DataPacket()
-    print str(packet)
+    packet.data = 'abcdefg'
+    print DataPacket(str(packet))
