@@ -117,7 +117,7 @@ dropRoot(uidname, gidname)
 reads = [tun] # for `select` function
 for portNum in UDP_PORTS:
     newSocket = InternalSocket(args.key)
-    newSocket.bind(portNum)
+    newSocket.bind(str(portNum))
     reads.append(newSocket)
 
 log("UDP: open ports %s" % ", ".join([str(i) for i in UDP_PORTS]))
@@ -133,54 +133,53 @@ def doExit(signum, frame):
 signal.signal(signal.SIGTERM, doExit)
 
 while True:
-    readables = select(reads, [], [])[0]
-    for each in readables:
-        if each == tun:
-            
-            # ---------- forward packets came from tun0
-            
-            buf = each.read(65536) # each.read(each.mtu)
-            # write to socket who have got a peer
-            possible = [x for x in xrange(1, len(reads)) if reads[x].peer]
-            if len(possible) == 0:
-                continue # drop the packet
-            i = possible[random.randrange(0, len(possible))]
-            workerSocket = reads[i]
-            # pack buf with timestamp
-            packet = DataPacket()
-            packet.data = buf
-            # encrypt and sign buf
-            workerSocket.send(str(packet))
-            debug(colorify("[%f] %s --> [%d]\n%s\n" % (\
-                workerSocket.sendtiming,
-                tun.name,
-                i,
-                showPacket(buf)
-            ), 'green'))
+    try:
+        readables = select(reads, [], [])[0]
+        for each in readables:
+            if each == tun:
+                # ---------- forward packets came from tun0
+                buf = each.read(65536) # each.read(each.mtu)
+                # write to socket who have got a peer
+                possible = [x for x in xrange(1, len(reads)) if reads[x].peer]
+                if len(possible) == 0:
+                    continue # drop the packet
+                i = possible[random.randrange(0, len(possible))]
+                workerSocket = reads[i]
+                # pack buf with timestamp
+                packet = DataPacket()
+                packet.data = buf
+                # encrypt and sign buf
+                workerSocket.send(str(packet))
+                debug(colorify("[%f] %s --> [%d]\n%s\n" % (\
+                    workerSocket.sendtiming,
+                    tun.name,
+                    i,
+                    showPacket(buf)
+                ), 'green'))
+            else:
+                # ---------- receive packets from internet
+                buf = each.receive()
+                if buf == None:
+                    # Received buffer being digested by InternalSocket itself,
+                    # either some internal mechanism packet, or packet with
+                    # wrong destination, or packet decryption failed...
+                    continue
 
-        else:
-            
-            # ---------- receive packets from internet
-            
-            buf = each.receive()
-            if buf == None:
-                # Received buffer being digested by InternalSocket itself,
-                # either some internal mechanism packet, or packet with wrong
-                # destination, or packet decryption failed...
-                continue
+                try:
+                    packet = DataPacket(buf)
+                except DataPacketException, e:
+                    # if failed reading the packet
+                    debug("[%d] --> %s: Bad packet - %s" % (i, tun.name, e))
+                    continue
+                
+                # send buf to network interface
+                tun.write(packet.data)
+                debug(colorify("[%f]: [%d] --> %s\n%s\n" % (\
+                    each.recvtiming,
+                    i,
+                    tun.name,
+                    showPacket(packet.data)
+                ), 'red'))
 
-            try:
-                packet = DataPacket(buf)
-            except DataPacketException, e:
-                # if failed reading the packet
-                debug("[%d] --> %s: Bad packet - %s" % (i, tun.name, e))
-                continue
-            
-            # send buf to network interface
-            tun.write(packet.data)
-            debug(colorify("[%f]: [%d] --> %s\n%s\n" % (\
-                each.recvtiming,
-                i,
-                tun.name,
-                showPacket(packet.data)
-            ), 'red'))
+    except KeyboardInterrupt:
+        doExit(None, None)

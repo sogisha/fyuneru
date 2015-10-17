@@ -9,15 +9,21 @@ internal magic word, and provides additionally abilities like encryption
 underlays, traffic statistics, etc.
 """
 
+import os
+import sys
+import hashlib
 from time import time
 from struct import pack, unpack
-from socket import socket, AF_INET, SOCK_DGRAM
+from socket import socket, AF_UNIX, SOCK_DGRAM
 from fyuneru.crypto import Crypto
 
 UDPCONNECTOR_WORD = \
     "Across the Great Wall, we can reach every corner in the world."
 
 class InternalSocket:
+
+    __sockpath = None
+    __sock = None
 
     peer = None
 
@@ -26,13 +32,37 @@ class InternalSocket:
 
     def __init__(self, key):
         self.__crypto = Crypto(key)
-        self.__sock = socket(AF_INET, SOCK_DGRAM)
+        self.__sock = socket(AF_UNIX, SOCK_DGRAM)
 
     def __getattr__(self, name):
         return getattr(self.__sock, name)
 
-    def bind(self, port):
-        self.__sock.bind(("127.0.0.1", port))
+    def getUNIXSocketPathByName(self, socketName):
+        pid = str(os.getpid())
+        socketid = hashlib.sha1(socketName).hexdigest()
+        socketFile = '.fyuneru-intsck-%s-%s' % (pid, socketid)
+        return os.path.join('/', 'tmp', socketFile) 
+
+    def close(self):
+        # close socket
+        print "Internal socket shutting down..."
+        try:
+            self.__sock.close()
+        except Exception,e:
+            print "Error closing socket: %s" % e
+        # remove socket file
+        try:
+            if None != self.__sockpath:
+                os.remove(self.__sockpath)
+        except Exception,e:
+            print "Error removing UNIX socket: %s" % e
+
+    def bind(self, name):
+        socketPath = self.getUNIXSocketPathByName(name)
+        if os.path.exists(socketPath):
+            os.remove(socketPath)
+        self.__sockpath = socketPath
+        self.__sock.bind(self.__sockpath)
 
     def receive(self):
         buf, sender = self.__sock.recvfrom(65536)
