@@ -4,15 +4,14 @@
 import argparse
 from select import select
 import signal
-import socket
 import random
 
 from pytun import TunTapDevice
 
-from fyuneru.crypto import Crypto
 from fyuneru.debug import showPacket, colorify
 from fyuneru.droproot import dropRoot
 from fyuneru.protocol import DataPacket, DataPacketException
+from fyuneru.intsck import InternalSocket
 
 ##############################################################################
 
@@ -88,11 +87,6 @@ if args.debug:
 else:
     debug = lambda x: None
 
-# ---------- config crypto functions
-
-crypto = Crypto(args.key)
-encrypt, decrypt = crypto.encrypt, crypto.decrypt
-
 # ---------- config TUN device
 
 tun = TunTapDevice()
@@ -121,17 +115,10 @@ dropRoot(uidname, gidname)
 # ---------- open UDP sockets
 
 reads = [tun] # for `select` function
-peers = []    # stores peers for each UDP port
-receivingTimings = [] # latest time of received packet on one UDP port
-sendingTimings = []   # latest time of sent packet on one UDP port
-
 for portNum in UDP_PORTS:
-    newSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    newSocket.bind(("127.0.0.1", portNum))
+    newSocket = InternalSocket(args.key)
+    newSocket.bind(portNum)
     reads.append(newSocket)
-    peers.append(False)
-    receivingTimings.append(0)
-    sendingTimings.append(0)
 
 log("UDP: open ports %s" % ", ".join([str(i) for i in UDP_PORTS]))
 
@@ -154,19 +141,18 @@ while True:
             
             buf = each.read(65536) # each.read(each.mtu)
             # write to socket who have got a peer
-            possible = [x for x in xrange(0, len(peers)) if peers[x] != False]
+            possible = [x for x in xrange(1, len(reads)) if reads[x].peer]
             if len(possible) == 0:
                 continue # drop the packet
             i = possible[random.randrange(0, len(possible))]
-            workerSocket = reads[i + 1]
+            workerSocket = reads[i]
             # pack buf with timestamp
             packet = DataPacket()
             packet.data = buf
-            sendingTimings[i] = packet.timestamp 
             # encrypt and sign buf
-            workerSocket.sendto(encrypt(str(packet)), peers[i])
+            workerSocket.send(str(packet))
             debug(colorify("[%f] %s --> [%d]\n%s\n" % (\
-                sendingTimings[i],
+                each.sendtiming,
                 tun.name,
                 i,
                 showPacket(buf)
@@ -176,32 +162,24 @@ while True:
             
             # ---------- receive packets from internet
             
-            i = reads.index(each) - 1
-            buf, sender = each.recvfrom(65536)
-            if buf.strip() == UDPCONNECTOR_WORD:
-                # connection word received, answer
-                peers[i] = sender
-                each.sendto(UDPCONNECTOR_WORD, sender)
-                debug("[%d] <==> %s:%d" % (i, sender[0], sender[1]))
+            buf = each.receive()
+            if buf == None:
+                # Received buffer being digested by InternalSocket itself,
+                # either some internal mechanism packet, or packet with wrong
+                # destination, or packet decryption failed...
                 continue
 
-            # not magic word
-
-            if peers[i] != sender:
-                continue
-            # decrypt buf and unpack
-            buf = decrypt(buf)
             try:
                 packet = DataPacket(buf)
             except DataPacketException, e:
-                # if decryption failed
+                # if failed reading the packet
                 debug("[%d] --> %s: Bad packet - %s" % (i, tun.name, e))
                 continue
-            receivingTimings[i] = max(receivingTimings[i], packet.timestamp)
+            
             # send buf to network interface
             tun.write(packet.data)
             debug(colorify("[%f]: [%d] --> %s\n%s\n" % (\
-                receivingTimings[i],
+                each.recvtiming,
                 i,
                 tun.name,
                 showPacket(packet.data)

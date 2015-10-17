@@ -6,7 +6,6 @@ Packets of Fyuneru
 """
 
 from struct import pack, unpack
-from time import time
 
 SIGN_DATAPACKET = 0x01
 
@@ -19,20 +18,19 @@ class DataPacketException(Exception):
 
 class DataPacket:
 
-    timestamp = 0 
     data = ''
 
     def __unpack(self, buf):
-        if(len(buf) < 9):
+        if(len(buf) < 1):
             raise DataPacketException("Not a valid data packet.")
-        sign, self.timestamp = unpack('<Bd', buf[:9])
+        sign = unpack('<B', buf[:1])[0]
         if sign != SIGN_DATAPACKET:
             raise DataPacketException("Not a valid data packet.")
-        self.data = buf[9:]
+        self.data = buf[1:]
 
     def __str__(self):
         """Pack this packet into a string."""
-        buf = pack('<Bd', SIGN_DATAPACKET, self.timestamp)
+        buf = pack('<B', SIGN_DATAPACKET)
         buf += self.data
         return buf 
     
@@ -43,7 +41,6 @@ class DataPacket:
                 raise DataPacketException("Not a valid data packet.")
             self.__unpack(buf)
             return
-        self.timestamp = time()
 
 ##############################################################################
 
