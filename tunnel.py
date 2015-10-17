@@ -152,7 +152,7 @@ while True:
             # encrypt and sign buf
             workerSocket.send(str(packet))
             debug(colorify("[%f] %s --> [%d]\n%s\n" % (\
-                each.sendtiming,
+                workerSocket.sendtiming,
                 tun.name,
                 i,
                 showPacket(buf)
