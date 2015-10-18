@@ -17,8 +17,11 @@ from struct import pack, unpack
 from socket import socket, AF_UNIX, SOCK_DGRAM
 from fyuneru.crypto import Crypto
 
+
 UDPCONNECTOR_WORD = \
     "Across the Great Wall, we can reach every corner in the world."
+
+##############################################################################
 
 def getUNIXSocketPathByName(socketName, role):
     socketid = hashlib.sha1(role + "|" + socketName).hexdigest()
