@@ -60,9 +60,8 @@ parser.add_argument(\
     required=True
 )
 parser.add_argument(\
-    "PORT",
-    metavar="PORT",
-    type=int,
+    "SOCKET_NAME",
+    type=str,
     nargs="+"
 )
 
@@ -72,7 +71,7 @@ args = parser.parse_args()
 MTU = 1500 
 UDPCONNECTOR_WORD = \
     "Across the Great Wall, we can reach every corner in the world."
-UDP_PORTS = args.PORT
+UNIX_SOCKET_NAMES = args.SOCKET_NAME
 
 ##############################################################################
 
@@ -115,12 +114,12 @@ dropRoot(uidname, gidname)
 # ---------- open UDP sockets
 
 reads = [tun] # for `select` function
-for portNum in UDP_PORTS:
+for socketName in UNIX_SOCKET_NAMES:
     newSocket = InternalSocket(args.key)
-    newSocket.bind(str(portNum))
+    newSocket.bind(socketName)
     reads.append(newSocket)
 
-log("UDP: open ports %s" % ", ".join([str(i) for i in UDP_PORTS]))
+log("UDP: opening unix socket %s" % ", ".join(UNIX_SOCKET_NAMES))
 
 ##############################################################################
 

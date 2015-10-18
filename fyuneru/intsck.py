@@ -20,6 +20,12 @@ from fyuneru.crypto import Crypto
 UDPCONNECTOR_WORD = \
     "Across the Great Wall, we can reach every corner in the world."
 
+def getUNIXSocketPathByName(socketName):
+    socketid = hashlib.sha1(socketName).hexdigest()
+    socketFile = '.fyuneru-intsck-%s' % socketid
+    return os.path.join('/', 'tmp', socketFile) 
+    
+
 class InternalSocket:
 
     __sockpath = None
@@ -37,12 +43,6 @@ class InternalSocket:
     def __getattr__(self, name):
         return getattr(self.__sock, name)
 
-    def getUNIXSocketPathByName(self, socketName):
-        pid = str(os.getpid())
-        socketid = hashlib.sha1(socketName).hexdigest()
-        socketFile = '.fyuneru-intsck-%s-%s' % (pid, socketid)
-        return os.path.join('/', 'tmp', socketFile) 
-
     def close(self):
         # close socket
         print "Internal socket shutting down..."
@@ -58,14 +58,22 @@ class InternalSocket:
             print "Error removing UNIX socket: %s" % e
 
     def bind(self, name):
-        socketPath = self.getUNIXSocketPathByName(name)
+        socketPath = getUNIXSocketPathByName(name)
         if os.path.exists(socketPath):
             os.remove(socketPath)
         self.__sockpath = socketPath
         self.__sock.bind(self.__sockpath)
+        if os.path.exists(self.__sockpath):
+            print "Internal socket: %s" % self.__sockpath
 
     def receive(self):
         buf, sender = self.__sock.recvfrom(65536)
+
+        if type(sender) != str:
+            # We communicate on UNIX sockets, if sender doesn't make its own
+            # statement(by using bind) of its socket address, we cannot reply.
+            # Therefore we'll discard such packets.
+            return None
 
         if buf.strip() == UDPCONNECTOR_WORD:
             # connection word received, answer
@@ -74,7 +82,7 @@ class InternalSocket:
             return None
 
         if self.peer != sender:
-            # Sender has not made a handshake
+            # Sender has not made a handshake before
             return None
 
         decryption = self.__crypto.decrypt(buf)
@@ -94,7 +102,12 @@ class InternalSocket:
         self.sendtiming = time()
         header = pack('<d', self.sendtiming)
         encryption = self.__crypto.encrypt(header + buf)
-        self.__sock.sendto(encryption, self.peer)
+        try:
+            # reply using last recorded peer
+            self.__sock.sendto(encryption, self.peer)
+        except Exception,e:
+            print e # for debug
+            self.peer = None # this peer may not work
 
     def __str__(self):
         """Pack this packet into a string."""

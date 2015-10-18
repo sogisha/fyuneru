@@ -1,4 +1,5 @@
 import argparse
+import os
 from select import select
 import subprocess
 import socket
@@ -14,6 +15,9 @@ def log(x):
 UDPCONNECTOR_WORD = \
     "Across the Great Wall, we can reach every corner in the world."
 
+LOCALSOCKET_PATH = '/tmp/.fyuneru-proxy-ss-client-%d' % os.getpid()
+if os.path.exists(LOCALSOCKET_PATH): os.remove(LOCALSOCKET_PATH)
+
 parser = argparse.ArgumentParser()
 
 # use the binary executable specified
@@ -26,7 +30,7 @@ parser.add_argument("-b", type=str) # local addr
 parser.add_argument("-l", type=int) # local port
 parser.add_argument("-m", type=str, default="aes-256-cfb") # encryption method
 # UDP Ports regarding the core process
-parser.add_argument("LOCAL", type=int, help="Local UDP Port")
+parser.add_argument("LOCAL", type=str, help="Local UNIX Socket")
 parser.add_argument(
     "REMOTEADDR",
     type=str, 
@@ -62,27 +66,27 @@ print "ss-tunnel -U -L %s:%d -k **** -s %s -p %d -b %s -l %d -m %s" % (\
 
 ##############################################################################
 
-#proxySocket = socksproxy.socksocket(socket.AF_INET, socket.SOCK_DGRAM)
+localSocket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
 proxySocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-localSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-#proxySocket.set_proxy(socksproxy.SOCKS5, args.b, args.l)
-
-#proxySocket.bind()
-#localSocket.bind()
+localSocket.bind(LOCALSOCKET_PATH)
 
 localConnected = False
 remoteConnected = False
 
-localPeer = ("127.0.0.1", args.LOCAL)
+localPeer = args.LOCAL
 remotePeer = (args.b, args.l)
 
 ##############################################################################
 
 def doExit(signum, frame):
-    global localSocket, proxySocket, sslocal 
+    global localSocket, proxySocket, sslocal, LOCALSOCKET_PATH
     try:
         localSocket.close()
+    except:
+        pass
+    try:
+        os.remove(LOCALSOCKET_PATH)
     except:
         pass
     try:
@@ -102,12 +106,13 @@ signal.signal(signal.SIGTERM, doExit)
 while True:
     try:
         if not localConnected:
+            if not os.path.exists(localPeer): continue
+            log("Trying to connect local socket at: %s" % localPeer)
             localSocket.sendto(UDPCONNECTOR_WORD, localPeer)
-            log("Trying to connect local socket at: %s:%d" % localPeer)
             time.sleep(0.5)
         if not remoteConnected:
-            proxySocket.sendto(UDPCONNECTOR_WORD, remotePeer)
             log("Trying to connect remote socket at %s:%d" % remotePeer)
+            proxySocket.sendto(UDPCONNECTOR_WORD, remotePeer)
             time.sleep(0.5)
 
         selected = select([localSocket, proxySocket], [], [], 1.0)
@@ -131,3 +136,7 @@ while True:
                     localSocket.sendto(buf, localPeer) #(buf)
     except KeyboardInterrupt:
         doExit(None, None)
+
+    except Exception,e:
+        #print e
+        pass

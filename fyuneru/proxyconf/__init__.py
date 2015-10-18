@@ -38,8 +38,8 @@ class ProxyConfig:
             self.proxyBase = os.path.join(".", "proxies")
         self.baseKey = args["key"]
         self.proxyType = args["type"]
-        self.portClient = args["clientPort"]
-        self.portServer = args["serverPort"]
+        self.proxyName = args["name"]
+        self.proxySocket = args["socket"]
         self.proxyConfig = args["config"]
 
     def getInitCommand(self, mode):

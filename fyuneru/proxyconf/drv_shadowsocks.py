@@ -13,6 +13,9 @@ def proxyCommand(self, mode):
     clientBinary = self.proxyConfig["client"]["bin"]
 
     if mode == 's':
+        # TODO we used now here at server a direct ss-tunnel. This has to
+        # be modified, since at server there is UNIX socket instead of port
+        # number
         proxyCommand = [
             serverBinary,
             '-k', sharedsecret,
@@ -46,8 +49,8 @@ def proxyCommand(self, mode):
             '-b', '127.0.0.1', # listens on local ip
             '-l', str(self.proxyConfig["client"]["port"]),
             '-m', 'aes-256-cfb',
-            str(self.portClient),         # local  udp listening port
-            '127.0.0.1',                  # remote udp listening addr
-            str(self.portServer),         # remote udp listening port
+            str(self.proxySocket),        # local internal UNIX socket path
+            connectIP,
+            str(connectPort),
         ]
     return proxyCommand

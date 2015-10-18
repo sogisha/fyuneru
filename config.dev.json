@@ -11,10 +11,7 @@
             "uidname": "nobody",
             "gidname": "nobody"
         },
-        "key": "DEVELOPMENT ONLY",
-        "udpalloc": {
-            "proxy-ss-01": {"server": 17100, "client": 7100}
-        }
+        "key": "DEVELOPMENT ONLY"
     },
     "proxies": {
         "proxy-ws-01": {
