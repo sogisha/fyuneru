@@ -12,17 +12,21 @@ def proxyCommand(self, mode):
     serverBinary = self.proxyConfig["server"]["bin"]
     clientBinary = self.proxyConfig["client"]["bin"]
 
+    proxyCommand = [
+        'python',
+        os.path.join(self.basepath, 'proxy.shadowsocks.py'),
+        '--uidname', self.user[0],
+        '--gidname', self.user[1],
+        '--socket', self.proxyName, # proxy name used for socket channel
+        '-k', sharedsecret,
+    ]
+
     if mode == 's':
-        # TODO we used now here at server a direct ss-tunnel. This has to
-        # be modified, since at server there is UNIX socket instead of port
-        # number
-        proxyCommand = [
-            serverBinary,
-            '-k', sharedsecret,
-            '-m', 'aes-256-cfb',
+        proxyCommand += [
+            '--mode', 'server',
+            '--bin', serverBinary,
             '-s', self.proxyConfig["server"]["ip"],
             '-p', str(self.proxyConfig["server"]["port"]),
-            '-U',
         ]
     else:
         # 1. packet will be locally sent to client.ip:client.port
@@ -38,22 +42,13 @@ def proxyCommand(self, mode):
         else:
             connectIP = self.proxyConfig["server"]["ip"]
             connectPort = self.proxyConfig["server"]["port"]
-
-        proxyCommand = [
-            'python',
-            os.path.join(self.basepath, 'proxy.shadowsocks.py'),
-            '--uidname', self.user[0],
-            '--gidname', self.user[1],
+        proxyCommand += [
             '--mode', 'client',
-            '--socket', self.proxyName, # proxy name used for socket channel
             '--bin', clientBinary,
-            '-k', sharedsecret,
             '-s', connectIP,
             '-p', str(connectPort),
-            '-b', '127.0.0.1', # listens on local ip
-            '-l', str(self.proxyConfig["client"]["port"]),
-            '-m', 'aes-256-cfb',
-            connectIP,
-            str(connectPort),
+            '-l', str(self.proxyConfig["client"]["port"]), # local tunnel entry 
         ]
+
+    proxyCommand += [str(self.proxyConfig["server"]["forward-to"])]
     return proxyCommand

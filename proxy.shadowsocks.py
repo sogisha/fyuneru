@@ -11,6 +11,8 @@ import time
 from fyuneru.intsck import InternalSocketClient, UDPCONNECTOR_WORD
 from fyuneru.droproot import dropRoot
 
+ENCRYPTION_METHOD = 'aes-256-cfb'
+
 ##############################################################################
 
 def log(x):
@@ -42,19 +44,23 @@ parser.add_argument(\
 # use the binary executable specified
 parser.add_argument("--bin", type=str, default="/usr/local/bin/ss-tunnel")
 # following -? arguments are for process `sslocal`
-parser.add_argument("-k", type=str) # key
-parser.add_argument("-s", type=str) # server addr
-parser.add_argument("-p", type=int) # server port
-parser.add_argument("-b", type=str) # local addr
-parser.add_argument("-l", type=int) # local port
-parser.add_argument("-m", type=str, default="aes-256-cfb") # encryption method
+parser.add_argument("-k", type=str, help="Encryption key.")
+parser.add_argument(\
+    "-s",
+    type=str,
+    help="""
+        Server address. Must be real address when running in SERVER mode, can
+        be an address of another tunnel's entry when running in CLIENT mode.
+    """)
+parser.add_argument("-p", type=int, help="Server port.")
+parser.add_argument("-l", type=int, help="Local UDP tunnel entry port.")
 # UDP Ports regarding the core process
-parser.add_argument(
-    "REMOTEADDR",
-    type=str, 
-    help="Remote UDP address."
-)
-parser.add_argument("REMOTE", type=int, help="Remote UDP Port")
+parser.add_argument(\
+    "FORWARD_TO",
+    type=int,
+    help="""
+        UDP tunnel exit port on server. Client's port will be forwarded to
+        this one.""")
 
 args = parser.parse_args()
 
@@ -64,27 +70,44 @@ dropRoot(args.uidname, args.gidname)
 
 ##############################################################################
 
+# start shadowsocks process
 
-sslocal = subprocess.Popen([
-    args.bin,                                       # shadowsocks-libev
-    '-U',                                           # UDP relay only
-    '-L', "%s:%d" % (args.REMOTEADDR, args.REMOTE), # destinating UDP addr
-    '-k', args.k,                                   # key
-    '-s', args.s,                                   # server host
-    '-p', str(args.p),                              # server port
-    '-b', args.b,                                   # local addr
-    '-l', str(args.l),                              # local port
-    '-m', args.m,                                   # encryption method
-])
-print "ss-tunnel -U -L %s:%d -k **** -s %s -p %d -b %s -l %d -m %s" % (\
-    args.REMOTEADDR,
-    args.REMOTE,
-    args.s,
-    args.p,
-    args.b,
-    args.l,
-    args.m
-)
+if 'client' == args.mode: # CLIENT mode
+    ssproc = subprocess.Popen([
+        args.bin,                                       # shadowsocks-libev
+        '-U',                                           # UDP relay only
+        '-L', "127.0.0.1:%d" % (args.FORWARD_TO),       # destinating UDP addr
+        '-k', args.k,                                   # key
+        '-s', args.s,                                   # server host
+        '-p', str(args.p),                              # server port
+        '-b', "127.0.0.1",                              # local addr
+        '-l', str(args.l),                              # local port
+        '-m', ENCRYPTION_METHOD,                        # encryption method
+    ])
+    print "ss-tunnel -U -L %s:%d -k **** -s %s -p %d -b %s -l %d -m %s" % (\
+        '127.0.0.1',
+        args.FORWARD_TO,
+        args.s,
+        args.p,
+        '127.0.0.1',
+        args.l,
+        ENCRYPTION_METHOD 
+    )
+else: # SERVER mode
+    ssproc = subprocess.Popen([
+        args.bin,                                       # shadowsocks-libev
+        '-U',                                           # UDP relay only
+        '-k', args.k,                                   # key
+        '-s', args.s,                                   # server host
+        '-p', str(args.p),                              # server port
+        '-m', ENCRYPTION_METHOD,                        # encryption method
+    ])
+    print "ss-server -U -k **** -s %s -p %d -m %s" % (\
+        args.s,
+        args.p,
+        ENCRYPTION_METHOD
+    )
+    
 
 ##############################################################################
 
