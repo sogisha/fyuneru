@@ -35,12 +35,14 @@ class CryptoException(Exception): pass
 
 def decidePaddingLength(bufferLength):
     global _RESULT_SIZE
-    minSize = 0
-    if bufferLength < 1600:
-        maxSize = 1600 - bufferLength 
+    if bufferLength < 1500:
+        randSize = random.randint(0, 1500)
+        if randSize > bufferLength:
+            return randSize - bufferLength
+        return 0
     else:
         maxSize = int(min(_RESULT_SIZE - bufferLength, bufferLength * 2.0))
-    return random.randint(minSize, maxSize)
+        return random.randint(0, maxSize)
 
 class Crypto:
     def __init__(self, passphrase):
