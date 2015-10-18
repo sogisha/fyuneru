@@ -5,7 +5,7 @@ import os
 
 def proxyCommand(self, mode):
     sharedsecret= hmac.HMAC(\
-        'shadowsocks',
+        self.proxyName + '-shadowsocks',
         self.baseKey,
         hashlib.sha256
     ).digest().encode('base64').strip()
