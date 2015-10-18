@@ -114,8 +114,11 @@ else: # SERVER mode
 localSocket = InternalSocketClient(args.socket) 
 proxySocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-remoteConnected = False
-remotePeer = (args.b, args.l)
+if 'server' == args.mode:
+    proxySocket.bind(('127.0.0.1', args.FORWARD_TO))
+    proxyPeer = None                  # not knowing where to send data back
+else:
+    proxyPeer = ('127.0.0.1', args.l) # send to local tunnel entrance
 
 ##############################################################################
 
@@ -143,11 +146,6 @@ while True:
     try:
         localSocket.heartbeat()
 
-        if not remoteConnected:
-            log("Trying to connect remote socket at %s:%d" % remotePeer)
-            proxySocket.sendto(UDPCONNECTOR_WORD, remotePeer)
-            time.sleep(0.5)
-
         selected = select([localSocket, proxySocket], [], [], 1.0)
         if len(selected) < 1:
             continue
@@ -157,14 +155,12 @@ while True:
             if each == localSocket:
                 buf = localSocket.receive()
                 if None == buf: continue
-                proxySocket.sendto(buf, remotePeer)
+                if None == proxyPeer: continue
+                proxySocket.sendto(buf, proxyPeer)
             
             if each == proxySocket:
                 buf, sender = each.recvfrom(65536)
-                if buf.strip() == UDPCONNECTOR_WORD:
-                    remoteConnected = True
-                    log("Remote socket connected.")
-                else:
-                    localSocket.send(buf)
+                proxyPeer = sender
+                localSocket.send(buf)
     except KeyboardInterrupt:
         doExit(None, None)
