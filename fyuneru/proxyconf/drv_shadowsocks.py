@@ -5,21 +5,28 @@ import os
 
 def proxyCommand(self, mode):
     sharedsecret= hmac.HMAC(\
-        'shadowsocks',
+        str(self.proxyName + '-shadowsocks'),
         self.baseKey,
         hashlib.sha256
     ).digest().encode('base64').strip()
     serverBinary = self.proxyConfig["server"]["bin"]
     clientBinary = self.proxyConfig["client"]["bin"]
 
+    proxyCommand = [
+        'python',
+        os.path.join(self.basepath, 'proxy.shadowsocks.py'),
+        '--uidname', self.user[0],
+        '--gidname', self.user[1],
+        '--socket', self.proxyName, # proxy name used for socket channel
+        '-k', sharedsecret,
+    ]
+
     if mode == 's':
-        proxyCommand = [
-            serverBinary,
-            '-k', sharedsecret,
-            '-m', 'aes-256-cfb',
+        proxyCommand += [
+            '--mode', 'server',
+            '--bin', serverBinary,
             '-s', self.proxyConfig["server"]["ip"],
             '-p', str(self.proxyConfig["server"]["port"]),
-            '-U',
         ]
     else:
         # 1. packet will be locally sent to client.ip:client.port
@@ -35,19 +42,13 @@ def proxyCommand(self, mode):
         else:
             connectIP = self.proxyConfig["server"]["ip"]
             connectPort = self.proxyConfig["server"]["port"]
-
-        proxyCommand = [
-            'python',
-            os.path.join(self.proxyBase, 'shadowsocks', 'client.py'),
+        proxyCommand += [
+            '--mode', 'client',
             '--bin', clientBinary,
-            '-k', sharedsecret,
             '-s', connectIP,
             '-p', str(connectPort),
-            '-b', '127.0.0.1', # listens on local ip
-            '-l', str(self.proxyConfig["client"]["port"]),
-            '-m', 'aes-256-cfb',
-            str(self.portClient),         # local  udp listening port
-            '127.0.0.1',                  # remote udp listening addr
-            str(self.portServer),         # remote udp listening port
+            '-l', str(self.proxyConfig["client"]["port"]), # local tunnel entry 
         ]
+
+    proxyCommand += [str(self.proxyConfig["server"]["forward-to"])]
     return proxyCommand

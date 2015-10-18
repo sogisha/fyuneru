@@ -13,6 +13,7 @@ from distutils.version import StrictVersion
 from json import loads
 
 from proxyconf import ProxyConfig
+from intsck import getUNIXSocketPathByName 
 
 VERSION_REQUIREMENT = "1.1" # required version of `config.json`
 
@@ -54,29 +55,13 @@ class Configuration:
             raise ConfigFileException("core.user.gidname must be specified.")
         self.user = (core["user"]["uidname"], core["user"]["gidname"])
 
-    def __loadProxyAllocations(self, core, proxies):
+    def __loadProxyAllocations(self, proxies):
         # get and validate proxy and ports allocations
         self.__proxies = {}
-        self.__coreServerPorts = []
-        self.__coreClientPorts = []
 
-        udpAllocations = core["udpalloc"]
-        for allocName in udpAllocations:
-            if not proxies.has_key(allocName):
-                raise ConfigFileException(\
-                    "Proxy method [%s] not defined" % allocName
-                )
-            proxyConfig = proxies[allocName]
-            allocConfig = udpAllocations[allocName]
-            self.__proxies[allocName] = {
-                "ports": {
-                    "server": allocConfig["server"],
-                    "client": allocConfig["client"],
-                },
-                "config": proxyConfig
-            }
-            self.__coreServerPorts.append(allocConfig["server"])
-            self.__coreClientPorts.append(allocConfig["client"])
+        for proxyName in proxies:
+            proxyConfig = proxies[proxyName]
+            self.__proxies[proxyName] = proxyConfig
 
     def listProxies(self):
         return self.__proxies.keys()
@@ -84,15 +69,12 @@ class Configuration:
     def getProxyConfig(self, name):
         if not self.__proxies.has_key(name):
             raise ConfigFileException("No such proxy method defined.")
-        proxy = self.__proxies[name]
-        proxyConfig = proxy["config"]
-        proxyServerUDPPort = proxy["ports"]["server"]
-        proxyClientUDPPort = proxy["ports"]["client"]
+        proxyConfig = self.__proxies[name]
         proxyType = proxyConfig["type"]
         return ProxyConfig(\
+            user=self.user,
+            name=name,
             type=proxyType, 
-            serverPort=proxyServerUDPPort,
-            clientPort=proxyClientUDPPort,
             config=proxyConfig,
             key=self.key
         )
@@ -104,10 +86,8 @@ class Configuration:
                   will run after root privileges is no more necessary."""
         if mode == 's':
             role = 'server'
-            ports = self.__coreServerPorts
         else:
             role = 'client'
-            ports = self.__coreClientPorts
         coreCommand = [\
             'python', 'tunnel.py',
             '--uidname', user[0],
@@ -117,7 +97,7 @@ class Configuration:
             '--client-ip', self.clientIP,
             '--key', self.key,
         ]
-        coreCommand += [str(i) for i in ports]
+        coreCommand += self.__proxies.keys()
         if debug:
             coreCommand.append('--debug')
         return coreCommand
@@ -148,14 +128,13 @@ class Configuration:
             'client',
             'user',
             'key',
-            'udpalloc'
         ):
             raise ConfigFileException("config.json incomplete.")
         self.__loadCore(jsonCore)
 
         # check for proxy allocations
         jsonProxies = json["proxies"]
-        self.__loadProxyAllocations(jsonCore, jsonProxies)
+        self.__loadProxyAllocations(jsonProxies)
 
 
 ##############################################################################

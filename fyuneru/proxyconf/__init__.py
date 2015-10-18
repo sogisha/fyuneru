@@ -14,6 +14,7 @@ corresponding keys for that purpose is calculated using the core key, so that
 the user doesn't have to maintain them on their own.
 """
 import os
+import sys
 
 from drv_shadowsocks import proxyCommand as proxyCommandShadowsocks
 from drv_websocket   import proxyCommand as proxyCommandWebsocket
@@ -32,14 +33,11 @@ class ProxyConfigException(Exception):
 class ProxyConfig:
     
     def __init__(self, **args):
-        if args.has_key("base"):
-            self.proxyBase = args["base"]
-        else:
-            self.proxyBase = os.path.join(".", "proxies")
+        self.user = args["user"]
+        self.basepath = os.path.realpath(os.path.dirname(sys.argv[0]))
         self.baseKey = args["key"]
         self.proxyType = args["type"]
-        self.portClient = args["clientPort"]
-        self.portServer = args["serverPort"]
+        self.proxyName = args["name"]
         self.proxyConfig = args["config"]
 
     def getInitCommand(self, mode):
