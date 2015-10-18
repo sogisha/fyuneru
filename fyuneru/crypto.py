@@ -37,7 +37,7 @@ def decidePaddingLength(bufferLength):
     global _RESULT_SIZE
     minSize = 0
     if bufferLength < 1600:
-        maxSize = 1500 
+        maxSize = 800 
     else:
         maxSize = int(min(_RESULT_SIZE - bufferLength, bufferLength * 2.0))
     return random.randint(minSize, maxSize)
