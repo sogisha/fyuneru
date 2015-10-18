@@ -72,6 +72,7 @@ class Configuration:
         proxyConfig = self.__proxies[name]
         proxyType = proxyConfig["type"]
         return ProxyConfig(\
+            user=self.user,
             name=name,
             type=proxyType, 
             config=proxyConfig,

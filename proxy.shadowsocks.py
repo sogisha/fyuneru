@@ -8,7 +8,8 @@ import socket
 import signal
 import time
 
-from fyuneru.intsck import InternalSocketClient
+from fyuneru.intsck import InternalSocketClient, UDPCONNECTOR_WORD
+from fyuneru.droproot import dropRoot
 
 ##############################################################################
 
@@ -16,7 +17,12 @@ def log(x):
     print "proxy-shadowsocks-client: %s" % x
 
 # ----------- parse arguments
+
 parser = argparse.ArgumentParser()
+
+# drop privilege to ...
+parser.add_argument("--uidname", metavar="UID_NAME", type=str, required=True)
+parser.add_argument("--gidname", metavar="GID_NAME", type=str, required=True)
 
 # mode for this script to run
 parser.add_argument(\
@@ -25,12 +31,14 @@ parser.add_argument(\
     choices=["server", "client"],
     required=True
 )
+
 # socket name
 parser.add_argument(\
     "--socket",
     type=str,
     required=True
 )
+
 # use the binary executable specified
 parser.add_argument("--bin", type=str, default="/usr/local/bin/ss-tunnel")
 # following -? arguments are for process `sslocal`
@@ -49,6 +57,10 @@ parser.add_argument(
 parser.add_argument("REMOTE", type=int, help="Remote UDP Port")
 
 args = parser.parse_args()
+
+##############################################################################
+
+dropRoot(args.uidname, args.gidname)
 
 ##############################################################################
 
@@ -76,27 +88,18 @@ print "ss-tunnel -U -L %s:%d -k **** -s %s -p %d -b %s -l %d -m %s" % (\
 
 ##############################################################################
 
-localSocket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+localSocket = InternalSocketClient(args.socket) 
 proxySocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-localSocket.bind(LOCALSOCKET_PATH)
-
-localConnected = False
 remoteConnected = False
-
-localPeer = args.LOCAL
 remotePeer = (args.b, args.l)
 
 ##############################################################################
 
 def doExit(signum, frame):
-    global localSocket, proxySocket, sslocal, LOCALSOCKET_PATH
+    global localSocket, proxySocket, sslocal
     try:
         localSocket.close()
-    except:
-        pass
-    try:
-        os.remove(LOCALSOCKET_PATH)
     except:
         pass
     try:
@@ -115,11 +118,8 @@ signal.signal(signal.SIGTERM, doExit)
 
 while True:
     try:
-        if not localConnected:
-            if not os.path.exists(localPeer): continue
-            log("Trying to connect local socket at: %s" % localPeer)
-            localSocket.sendto(UDPCONNECTOR_WORD, localPeer)
-            time.sleep(0.5)
+        localSocket.heartbeat()
+
         if not remoteConnected:
             log("Trying to connect remote socket at %s:%d" % remotePeer)
             proxySocket.sendto(UDPCONNECTOR_WORD, remotePeer)
@@ -131,22 +131,17 @@ while True:
         readables = selected[0]
 
         for each in readables:
-            buf, sender = each.recvfrom(65536)
-            if buf.strip() == UDPCONNECTOR_WORD:
-                if each == localSocket:
-                    localConnected = True
-                    log("Local socket connected.")
-                if each == proxySocket:
+            if each == localSocket:
+                buf = localSocket.receive()
+                if None == buf: continue
+                proxySocket.sendto(buf, remotePeer)
+            
+            if each == proxySocket:
+                buf, sender = each.recvfrom(65536)
+                if buf.strip() == UDPCONNECTOR_WORD:
                     remoteConnected = True
                     log("Remote socket connected.")
-            else:
-                if each == localSocket:
-                    proxySocket.sendto(buf, remotePeer) #write(buf)
-                if each == proxySocket:
-                    localSocket.sendto(buf, localPeer) #(buf)
+                else:
+                    localSocket.send(buf)
     except KeyboardInterrupt:
         doExit(None, None)
-
-    except Exception,e:
-        #print e
-        pass

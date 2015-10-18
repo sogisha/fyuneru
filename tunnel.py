@@ -11,7 +11,7 @@ from pytun import TunTapDevice
 from fyuneru.debug import showPacket, colorify
 from fyuneru.droproot import dropRoot
 from fyuneru.protocol import DataPacket, DataPacketException
-from fyuneru.intsck import InternalSocket
+from fyuneru.intsck import InternalSocketServer
 
 ##############################################################################
 
@@ -115,7 +115,7 @@ dropRoot(uidname, gidname)
 
 reads = [tun] # for `select` function
 for socketName in UNIX_SOCKET_NAMES:
-    newSocket = InternalSocket(socketName, args.key)
+    newSocket = InternalSocketServer(socketName, args.key)
     reads.append(newSocket)
 
 log("UDP: opening unix socket %s" % ", ".join(UNIX_SOCKET_NAMES))

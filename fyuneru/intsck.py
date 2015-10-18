@@ -110,8 +110,10 @@ class InternalSocketClient:
     __peer = None
     
     connected = False
+    __lastbeat = 0
 
     def __init__(self, name):
+        self.__name = name
         self.__sock = socket(AF_UNIX, SOCK_DGRAM)
         self.__sockpath = getUNIXSocketPathByName(name, "client")
         self.__peer = getUNIXSocketPathByName(name, "server")
@@ -132,22 +134,30 @@ class InternalSocketClient:
         except Exception,e:
             print "Error removing UNIX socket: %s" % e
 
+    def heartbeat(self):
+        if not os.path.exists(self.__peer):
+            self.connected = False
+            return
+        if not self.connected or time() - self.__lastbeat > 5:
+            try:
+                self.__lastbeat = time()
+                self.__sock.sendto(UDPCONNECTOR_WORD, self.__peer)
+            except Exception,e:
+                self.connected = False
+                print e
+
     def receive(self):
         buf, sender = self.__sock.recvfrom(65536)
         if sender != self.__peer: return None
         if buf.strip() == UDPCONNECTOR_WORD:
             # connection word received, answer
+            print "CONNECTION: %s.client" % self.__name
             self.connected = True
             return None
         return buf 
 
     def send(self, buf):
-        if not self.connected:
-            if os.path.exists(self.__peer):
-                try:
-                    self.__sock.sendto(UDPCONNECTOR_WORD, self.__peer)
-                except Exception,e:
-                    print e
+        if not self.connected: return
         try:
             # reply using last recorded peer
             self.__sock.sendto(buf, self.__peer)

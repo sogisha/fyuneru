@@ -64,7 +64,6 @@ try:
     print "Start core process..."
     print " ".join(coreCommand)
     processes.new('core', coreCommand)
-    dropRoot(*config.user)
 
     # ---------- start proxies
 
@@ -74,6 +73,10 @@ try:
         proxyCommand = proxyCommands[proxyName]
         print " ".join(proxyCommand)
         processes.new(proxyName, proxyCommand)
+    
+    # ---------- drop root
+
+    dropRoot(*config.user)
 
     # ---------- deal with exiting and cleaning
 
