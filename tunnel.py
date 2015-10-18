@@ -4,10 +4,10 @@
 import argparse
 from select import select
 import signal
-import random
 
 from pytun import TunTapDevice
 
+from fyuneru.crypto import randint
 from fyuneru.debug import showPacket, colorify
 from fyuneru.droproot import dropRoot
 from fyuneru.protocol import DataPacket, DataPacketException
@@ -141,7 +141,7 @@ while True:
                 possible = [x for x in xrange(1, len(reads)) if reads[x].peer]
                 if len(possible) == 0:
                     continue # drop the packet
-                i = possible[random.randrange(0, len(possible))]
+                i = possible[randint(0, len(possible) - 1)]
                 workerSocket = reads[i]
                 # pack buf with timestamp
                 packet = DataPacket()

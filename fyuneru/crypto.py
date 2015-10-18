@@ -21,7 +21,6 @@ import hashlib
 import hmac
 from os import urandom
 from struct import pack, unpack
-import random
 
 from salsa20 import XSalsa20_xor
 
@@ -33,16 +32,20 @@ _RESULT_SIZE = 0xFFFF - 24 - 2 - 32
 
 class CryptoException(Exception): pass
 
+def randint(a, b):
+    i = unpack('<L', urandom(4))[0]
+    return a + i % (b-a+1)
+
 def decidePaddingLength(bufferLength):
     global _RESULT_SIZE
     if bufferLength < 1500:
-        randSize = random.randint(0, 1500)
+        randSize = randint(0, 1500)
         if randSize > bufferLength:
             return randSize - bufferLength
         return 0
     else:
         maxSize = int(min(_RESULT_SIZE - bufferLength, bufferLength * 2.0))
-        return random.randint(0, maxSize)
+        return randint(0, maxSize)
 
 class Crypto:
     def __init__(self, passphrase):
