@@ -172,9 +172,8 @@ while True:
                 
                 # send buf to network interface
                 tun.write(packet.data)
-                debug(colorify("[%f]: [%d] --> %s\n%s\n" % (\
+                debug(colorify("[%f]: --> %s\n%s\n" % (\
                     each.recvtiming,
-                    i,
                     tun.name,
                     showPacket(packet.data)
                 ), 'red'))

@@ -151,7 +151,7 @@ class InternalSocketClient:
         if sender != self.__peer: return None
         if buf.strip() == UDPCONNECTOR_WORD:
             # connection word received, answer
-            print "CONNECTION: %s.client" % self.__name
+            print "CONNECTION: %s(IPCCli)" % self.__name
             self.connected = True
             return None
         return buf 

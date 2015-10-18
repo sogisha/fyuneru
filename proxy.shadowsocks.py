@@ -156,11 +156,13 @@ while True:
                 buf = localSocket.receive()
                 if None == buf: continue
                 if None == proxyPeer: continue
+                log("Received %d bytes, sending to tunnel." % len(buf))
                 proxySocket.sendto(buf, proxyPeer)
             
             if each == proxySocket:
                 buf, sender = each.recvfrom(65536)
                 proxyPeer = sender
+                log("Received %d bytes, sending back to core." % len(buf))
                 localSocket.send(buf)
     except KeyboardInterrupt:
         doExit(None, None)
