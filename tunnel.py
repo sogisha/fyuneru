@@ -115,8 +115,7 @@ dropRoot(uidname, gidname)
 
 reads = [tun] # for `select` function
 for socketName in UNIX_SOCKET_NAMES:
-    newSocket = InternalSocket(args.key)
-    newSocket.bind(socketName)
+    newSocket = InternalSocket(socketName, args.key)
     reads.append(newSocket)
 
 log("UDP: opening unix socket %s" % ", ".join(UNIX_SOCKET_NAMES))

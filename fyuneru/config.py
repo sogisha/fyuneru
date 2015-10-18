@@ -73,7 +73,6 @@ class Configuration:
         proxyType = proxyConfig["type"]
         return ProxyConfig(\
             name=name,
-            socket=getUNIXSocketPathByName(name),
             type=proxyType, 
             config=proxyConfig,
             key=self.key

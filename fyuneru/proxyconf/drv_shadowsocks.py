@@ -41,7 +41,9 @@ def proxyCommand(self, mode):
 
         proxyCommand = [
             'python',
-            os.path.join(self.proxyBase, 'shadowsocks', 'client.py'),
+            os.path.join(self.basepath, 'proxy.shadowsocks.py'),
+            '--mode', 'client',
+            '--socket', self.proxyName, # proxy name used for socket channel
             '--bin', clientBinary,
             '-k', sharedsecret,
             '-s', connectIP,
@@ -49,7 +51,6 @@ def proxyCommand(self, mode):
             '-b', '127.0.0.1', # listens on local ip
             '-l', str(self.proxyConfig["client"]["port"]),
             '-m', 'aes-256-cfb',
-            str(self.proxySocket),        # local internal UNIX socket path
             connectIP,
             str(connectPort),
         ]
