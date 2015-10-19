@@ -1,3 +1,19 @@
+"""
+XMPP Proxy Process
+==================
+
+This proxy utilizes the `xmpppy` library. You have to first install it before
+using this. If
+    
+    sudo pip install xmpppy
+
+doesn't work, you may have to download it from <http://xmpppy.sourceforge.net>
+and install manually.
+
+> > > CURRENTLY UNDER DEVELOPEMENT...
+"""
+
+
 import argparse
 import signal
 from select import select
@@ -57,14 +73,20 @@ class SocketXMPPProxy:
         presence = xmpp.protocol.Presence(priority=999)
         self.xmpp.send(presence)
 
+    recvQueue = []
+
     def message(self, con, event):
         msgtype = event.getType()
         fromjid = event.getFrom().getStripped()
-        print fromjid, self.__peerJIDStripped
         if fromjid != self.__peerJIDStripped: return
         if msgtype in ('chat', 'normal', None):
             body = event.getBody()
-            print body 
+            recvQueue.append(body.decode('base64'))
+
+    def send(self, buf):
+        buf = buf.encode('base64')
+        message = xmpp.protocol.Message(to=self.__peer, body=buf, typ='chat')
+        self.xmpp.send(message)
 
 ##############################################################################
 
@@ -101,13 +123,14 @@ while True:
         for each in r:
             if sockets[each] == 'proxy':
                 proxy.xmpp.Process(1)
-                print "#1"
-                pass
+                for each in proxy.recvQueue:
+                    local.send(each)
+                proxy.recvQueue = []
 
             if sockets[each] == 'local':
                 recv = local.receive()
                 if not recv: continue
-                
+                proxy.send(recv)
 
 
     except KeyboardInterrupt:
