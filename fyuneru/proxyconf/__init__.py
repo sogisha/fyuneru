@@ -17,11 +17,13 @@ import os
 import sys
 
 from drv_shadowsocks import proxyCommand as proxyCommandShadowsocks
-from drv_websocket   import proxyCommand as proxyCommandWebsocket
+#from drv_websocket   import proxyCommand as proxyCommandWebsocket  ## not usable
+from drv_xmpp        import proxyCommand as proxyCommandXMPP
 
 proxyCommands = {\
     "shadowsocks": proxyCommandShadowsocks,
-    "websocket": proxyCommandWebsocket,
+#    "websocket": proxyCommandWebsocket,
+    "xmpp": proxyCommandXMPP,
 }
 
 
