@@ -23,6 +23,9 @@ import xmpp
 from fyuneru.intsck import InternalSocketClient
 from fyuneru.droproot import dropRoot
 
+def log(x):
+    print "proxy-xmpp-client: %s" % x
+
 # ----------- parse arguments
 
 parser = argparse.ArgumentParser()
@@ -51,7 +54,10 @@ class SocketXMPPProxy:
         self.__peer = xmpp.protocol.JID(peer)
         self.__peerJIDStripped = self.__peer.getStripped()
 
-        self.xmpp = xmpp.Client(self.__jid.getDomain())
+        self.xmpp = xmpp.Client(\
+            self.__jid.getDomain(),
+            debug=["always", "socket", "nodebuilder", "dispatcher"]
+        )
         connection = self.xmpp.connect()
         if not connection:
             raise SocketXMPPProxyException("Unable to connect.")
@@ -124,12 +130,14 @@ while True:
             if sockets[each] == 'proxy':
                 proxy.xmpp.Process(1)
                 for b in proxy.recvQueue:
+                    log("Received %d bytes, sending to core." % len(b))
                     local.send(b)
                 proxy.recvQueue = []
 
             if sockets[each] == 'local':
                 recv = local.receive()
                 if not recv: continue
+                log("Received %d bytes, sending to tunnel." % len(recv))
                 proxy.send(recv)
 
 
