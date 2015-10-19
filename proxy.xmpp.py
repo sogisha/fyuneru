@@ -81,7 +81,7 @@ class SocketXMPPProxy:
         if fromjid != self.__peerJIDStripped: return
         if msgtype in ('chat', 'normal', None):
             body = event.getBody()
-            recvQueue.append(body.decode('base64'))
+            self.recvQueue.append(body.decode('base64'))
 
     def send(self, buf):
         buf = buf.encode('base64')
