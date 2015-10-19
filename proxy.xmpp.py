@@ -123,8 +123,8 @@ while True:
         for each in r:
             if sockets[each] == 'proxy':
                 proxy.xmpp.Process(1)
-                for each in proxy.recvQueue:
-                    local.send(each)
+                for b in proxy.recvQueue:
+                    local.send(b)
                 proxy.recvQueue = []
 
             if sockets[each] == 'local':
