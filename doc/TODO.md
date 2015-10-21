@@ -25,7 +25,7 @@
 
 [ DONE ] 9. 编写基于XMPP的代理(使用xmpppy)
 
-[      ] 10. 使用Python的logging模块来管理log输出。
+[ pend ] 10. 使用Python的logging模块来管理log输出。
 
 
 ## 已完成的改进
