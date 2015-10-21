@@ -6,6 +6,8 @@ from select import select
 import socket
 import signal
 import time
+import logging
+from logging import info, debug, warning, error
 
 from fyuneru.intsck import InternalSocketClient, UDPCONNECTOR_WORD
 from fyuneru.droproot import dropRoot
@@ -14,9 +16,6 @@ from fyuneru.procmgr import ProcessManager
 ENCRYPTION_METHOD = 'aes-256-cfb'
 
 ##############################################################################
-
-def log(x):
-    print "proxy-shadowsocks-client: %s" % x
 
 # ----------- parse arguments
 
@@ -95,11 +94,6 @@ else: # SERVER mode
         '-p', str(args.p),                              # server port
         '-m', ENCRYPTION_METHOD,                        # encryption method
     ]
-    print "ss-server -U -k **** -s %s -p %d -m %s" % (\
-        args.s,
-        args.p,
-        ENCRYPTION_METHOD
-    )
 
 procmgr.new('shadowsocks', sscmd)
     
@@ -131,7 +125,7 @@ def doExit(signum, frame):
         procmgr.killall()
     except:
         pass
-    log("exit now.")
+    info("Exit now.")
     exit()
 signal.signal(signal.SIGTERM, doExit)
 
@@ -151,13 +145,13 @@ while True:
                 buf = localSocket.receive()
                 if None == buf: continue
                 if None == proxyPeer: continue
-                log("Received %d bytes, sending to tunnel." % len(buf))
+                debug("Received %d bytes, sending to tunnel." % len(buf))
                 proxySocket.sendto(buf, proxyPeer)
             
             if each == proxySocket:
                 buf, sender = each.recvfrom(65536)
                 proxyPeer = sender
-                log("Received %d bytes, sending back to core." % len(buf))
+                debug("Received %d bytes, sending back to core." % len(buf))
                 localSocket.send(buf)
     except KeyboardInterrupt:
         doExit(None, None)
