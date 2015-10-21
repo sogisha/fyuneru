@@ -4,11 +4,13 @@
 import argparse
 from select import select
 import signal
+import logging
+from logging import info, debug, warning, error, critical
 
 from pytun import TunTapDevice
 
 from fyuneru.crypto import randint
-from fyuneru.debug import showPacket, colorify
+from fyuneru.debug import showPacket
 from fyuneru.droproot import dropRoot
 from fyuneru.protocol import DataPacket, DataPacketException
 from fyuneru.intsck import InternalSocketServer
@@ -77,34 +79,32 @@ UNIX_SOCKET_NAMES = args.SOCKET_NAME
 
 # ---------- config log/debug functions
 
-def log(x):
-    print x
 if args.debug:
-    def debug(x):
-        print x
-    log("Debug mode entered.")
+    logging.basicConfig(level=logging.DEBUG)
 else:
-    debug = lambda x: None
+    logging.basicConfig(level=logging.INFO)
 
 # ---------- config TUN device
 
 tun = TunTapDevice()
 if "client" == args.role:
-    log("Running as client.")
+    info("Running as client.")
     tun.addr = args.client_ip #"10.1.0.2"
     tun.dstaddr = args.server_ip #"10.1.0.1"
 else:
-    log("Running as server.")
+    info("Running as server.")
     tun.addr = args.server_ip #"10.1.0.1"
     tun.dstaddr = args.client_ip #"10.1.0.2"
 tun.netmask = "255.255.255.0"
 tun.mtu = MTU
-log(\
+
+info(\
     """%s: mtu %d  addr %s  netmask %s  dstaddr %s""" % \
     (tun.name, tun.mtu, tun.addr, tun.netmask, tun.dstaddr)
 )
+
 tun.up()
-log("%s: up now." % tun.name)
+info("%s: up now." % tun.name)
 
 # ---------- drop root privileges
 
@@ -118,13 +118,13 @@ for socketName in UNIX_SOCKET_NAMES:
     newSocket = InternalSocketServer(socketName, args.key)
     reads.append(newSocket)
 
-log("UDP: opening unix socket %s" % ", ".join(UNIX_SOCKET_NAMES))
+info("Opening unix socket %s" % ", ".join(UNIX_SOCKET_NAMES))
 
 ##############################################################################
 
 def doExit(signum, frame):
     global reads 
-    print "Tunnel: exit now."
+    info("Exit now.")
     for each in reads:
         each.close()
     exit()
@@ -148,12 +148,12 @@ while True:
                 packet.data = buf
                 # encrypt and sign buf
                 workerSocket.send(str(packet))
-                debug(colorify("[%f] %s --> [%d]\n%s\n" % (\
+                debug("[%f] %s --> [%d]\n%s\n" % (\
                     workerSocket.sendtiming,
                     tun.name,
                     i,
                     showPacket(buf)
-                ), 'green'))
+                ))
             else:
                 # ---------- receive packets from internet
                 buf = each.receive()
@@ -172,11 +172,11 @@ while True:
                 
                 # send buf to network interface
                 tun.write(packet.data)
-                debug(colorify("[%f]: --> %s\n%s\n" % (\
+                debug("[%f]: --> %s\n%s\n" % (\
                     each.recvtiming,
                     tun.name,
                     showPacket(packet.data)
-                ), 'red'))
+                ))
 
     except KeyboardInterrupt:
         doExit(None, None)

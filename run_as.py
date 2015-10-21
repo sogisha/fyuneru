@@ -3,6 +3,8 @@
 
 import argparse
 import json
+import logging
+from logging import info, debug, warning, error, critical
 import os
 import signal
 import subprocess
@@ -11,6 +13,10 @@ import sys
 from fyuneru.procmgr import ProcessManager 
 from fyuneru.config import Configuration
 from fyuneru.droproot import dropRoot
+
+
+logging.basicConfig(level=logging.INFO)
+
 
 
 parser = argparse.ArgumentParser(description="""
@@ -57,41 +63,39 @@ for proxyName in config.listProxies():
 
 processes = ProcessManager()
 
+def doExit(signum, frame):
+    global processes 
+    t = 1.0 # second(s) waiting for exit
+    try:
+        processes.killall(t)
+        info("Exiting. Wait %f seconds for child processes to exit." % t)
+    except Exception,e:
+        error("Exiting, error: %s" % e)
+    info("Good bye.")
+    sys.exit()
+signal.signal(signal.SIGTERM, doExit)
+signal.signal(signal.SIGINT, doExit)
+
 try:
 
     # ---------- start core
 
-    print "Start core process..."
-    print " ".join(coreCommand)
+    info("Start core process...")
+    debug(" ".join(coreCommand))
     processes.new('core', coreCommand)
 
     # ---------- start proxies
 
-    print "Starting proxy process..."
+    info("Starting proxy process...")
     processProxies = []
     for proxyName in proxyCommands:
         proxyCommand = proxyCommands[proxyName]
-        print " ".join(proxyCommand)
+        debug(" ".join(proxyCommand))
         processes.new(proxyName, proxyCommand)
-    
+
     # ---------- drop root
 
     dropRoot(*config.user)
-
-    # ---------- deal with exiting and cleaning
-
-    def doExit(signum, frame):
-        global processes 
-        t = 1.0 # second(s) waiting for exit
-        try:
-            processes.killall(t)
-            print "Exiting. Wait %f seconds for child processes to exit." % t
-        except Exception,e:
-            print "Exiting, error: %s" % e
-        print "Good bye."
-        sys.exit()
-    signal.signal(signal.SIGTERM, doExit)
-    signal.signal(signal.SIGINT, doExit)
 
     # ---------- wait for the core process
 

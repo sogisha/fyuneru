@@ -3,6 +3,7 @@
 import signal
 import subprocess
 import time
+from logging import debug
 
 
 class ProcessManagerException(Exception):
@@ -20,6 +21,7 @@ class ProcessManager:
         if self.__processes.has_key(name):
             raise ProcessManagerException(\
                 "Child process already registered with name [%s]" % name)
+        debug("Start subprocess: %s" % " ".join(cmd))
         proc = subprocess.Popen(cmd)
         self.__processes[name] = proc
 

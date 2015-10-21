@@ -12,6 +12,7 @@ underlays, traffic statistics, etc.
 import os
 import sys
 import hashlib
+from logging import debug, info, warning, error
 from time import time
 from struct import pack, unpack
 from socket import socket, AF_UNIX, SOCK_DGRAM
@@ -51,16 +52,16 @@ class InternalSocketServer:
 
     def close(self):
         # close socket
-        print "Internal socket shutting down..."
+        debug("Internal socket shutting down...")
         try:
             self.__sock.close()
         except Exception,e:
-            print "Error closing socket: %s" % e
+            error("Error closing socket: %s" % e)
         # remove socket file
         try:
             os.remove(self.__sockpath)
         except Exception,e:
-            print "Error removing UNIX socket: %s" % e
+            error("Error removing UNIX socket: %s" % e)
 
     def receive(self):
         buf, sender = self.__sock.recvfrom(65536)
@@ -102,7 +103,7 @@ class InternalSocketServer:
             # reply using last recorded peer
             self.__sock.sendto(encryption, self.peer)
         except Exception,e:
-            print e # for debug
+            error(e) # for debug
             self.peer = None # this peer may not work
 
 
@@ -127,15 +128,15 @@ class InternalSocketClient:
         return getattr(self.__sock, name)
 
     def close(self):
-        print "Internal socket shutting down..."
+        debug("Internal socket shutting down...")
         try:
             self.__sock.close()
         except Exception,e:
-            print "Error closing socket: %s" % e
+            error("Error closing socket: %s" % e)
         try:
             os.remove(self.__sockpath)
         except Exception,e:
-            print "Error removing UNIX socket: %s" % e
+            error("Error removing UNIX socket: %s" % e)
 
     def heartbeat(self):
         if not os.path.exists(self.__peer):
@@ -154,7 +155,7 @@ class InternalSocketClient:
         if sender != self.__peer: return None
         if buf.strip() == UDPCONNECTOR_WORD:
             # connection word received, answer
-            print "CONNECTION: %s(IPCCli)" % self.__name
+            debug("CONNECTION: %s(IPCCli)" % self.__name)
             self.connected = True
             return None
         return buf 
