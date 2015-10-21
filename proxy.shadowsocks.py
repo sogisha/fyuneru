@@ -10,6 +10,7 @@ import time
 
 from fyuneru.intsck import InternalSocketClient, UDPCONNECTOR_WORD
 from fyuneru.droproot import dropRoot
+from fyuneru.procmgr import ProcessManager
 
 ENCRYPTION_METHOD = 'aes-256-cfb'
 
@@ -72,8 +73,10 @@ dropRoot(args.uidname, args.gidname)
 
 # start shadowsocks process
 
+procmgr = ProcessManager()
+
 if 'client' == args.mode: # CLIENT mode
-    ssproc = subprocess.Popen([
+    sscmd = [
         args.bin,                                       # shadowsocks-libev
         '-U',                                           # UDP relay only
         '-L', "127.0.0.1:%d" % (args.FORWARD_TO),       # destinating UDP addr
@@ -83,30 +86,23 @@ if 'client' == args.mode: # CLIENT mode
         '-b', "127.0.0.1",                              # local addr
         '-l', str(args.l),                              # local port
         '-m', ENCRYPTION_METHOD,                        # encryption method
-    ])
-    print "ss-tunnel -U -L %s:%d -k **** -s %s -p %d -b %s -l %d -m %s" % (\
-        '127.0.0.1',
-        args.FORWARD_TO,
-        args.s,
-        args.p,
-        '127.0.0.1',
-        args.l,
-        ENCRYPTION_METHOD 
-    )
+    ]
 else: # SERVER mode
-    ssproc = subprocess.Popen([
+    sscmd = [
         args.bin,                                       # shadowsocks-libev
         '-U',                                           # UDP relay only
         '-k', args.k,                                   # key
         '-s', args.s,                                   # server host
         '-p', str(args.p),                              # server port
         '-m', ENCRYPTION_METHOD,                        # encryption method
-    ])
+    ]
     print "ss-server -U -k **** -s %s -p %d -m %s" % (\
         args.s,
         args.p,
         ENCRYPTION_METHOD
     )
+
+procmgr.new('shadowsocks', sscmd)
     
 
 ##############################################################################
@@ -123,17 +119,13 @@ else:
 ##############################################################################
 
 def doExit(signum, frame):
-    global localSocket, proxySocket, sslocal
+    global localSocket, proxySocket
     try:
         localSocket.close()
     except:
         pass
     try:
         proxySocket.close()
-    except:
-        pass
-    try:
-        sslocal.terminate()
     except:
         pass
     log("exit now.")
