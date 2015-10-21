@@ -3,7 +3,6 @@
 import argparse
 import os
 from select import select
-import subprocess
 import socket
 import signal
 import time
@@ -119,13 +118,17 @@ else:
 ##############################################################################
 
 def doExit(signum, frame):
-    global localSocket, proxySocket
+    global localSocket, proxySocket, procmgr
     try:
         localSocket.close()
     except:
         pass
     try:
         proxySocket.close()
+    except:
+        pass
+    try:
+        procmgr.killall()
     except:
         pass
     log("exit now.")
