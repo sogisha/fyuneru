@@ -132,7 +132,10 @@ signal.signal(signal.SIGTERM, doExit)
 
 while True:
     try:
-        readables = select(reads, [], [])[0]
+        
+        # ---------- deal with I/O things
+        
+        readables = select(reads, [], [], 0.5)[0]
         for each in readables:
             if each == tun:
                 # ---------- forward packets came from tun0
@@ -177,6 +180,16 @@ while True:
                     tun.name,
                     showPacket(packet.data)
                 ))
+
+        # ---------- deal with tunnel delay timings
+
+        for i in xrange(1, len(reads)): # omit i==0 for TUN. XXX bad code!
+            theSocket = reads[i]
+            sent, recv = theSocket.sendtiming, theSocket.recvtiming
+            # we may decide a proxy is stale and restart. however we are
+            # not in the process controlling proxy processes... TODO 
+            pass
+
 
     except KeyboardInterrupt:
         doExit(None, None)
