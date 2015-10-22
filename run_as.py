@@ -10,9 +10,8 @@ import signal
 import subprocess
 import sys
 
-from fyuneru.procmgr import ProcessManager 
-from fyuneru.config import Configuration
-from fyuneru.droproot import dropRoot
+from fyuneru.util.config import Configuration
+from fyuneru.util.droproot import dropRoot
 
 
 logging.basicConfig(level=logging.INFO)
@@ -20,7 +19,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 parser = argparse.ArgumentParser(description="""
-    This is the initator of Fyeneru proxy. Before running, put a `config.json`
+    This is the initator of Fyuneru proxy. Before running, put a `config.json`
     in the same path as this file.
     Requires root priviledge for running this script.
 """)

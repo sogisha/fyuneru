@@ -13,15 +13,12 @@ and install manually.
 > > > CURRENTLY UNDER DEVELOPEMENT...
 """
 
-
+import os
 import argparse
 import signal
 from select import select
 
 import xmpp
-
-from fyuneru.intsck import InternalSocketClient
-from fyuneru.droproot import dropRoot
 
 def log(x):
     print "proxy-xmpp-client: %s" % x
@@ -41,7 +38,6 @@ parser.add_argument("--password", type=str, required=True)
 
 args = parser.parse_args()
 
-dropRoot(args.uidname, args.gidname)
 
 ##############################################################################
 
@@ -97,25 +93,6 @@ class SocketXMPPProxy:
 ##############################################################################
 
 proxy = SocketXMPPProxy(args.jid, args.password, args.peer)
-local = InternalSocketClient(args.socket)
-
-##############################################################################
-
-def doExit(signum, frame):
-    global local, proxy
-    try:
-        local.close()
-    except:
-        pass
-    try:
-        proxy.xmpp.disconnect()
-    except:
-        pass
-    print "exit now."
-    exit()
-signal.signal(signal.SIGTERM, doExit)
-
-##############################################################################
 
 sockets = {
     proxy.xmpp.Connection._sock: 'proxy',
@@ -147,11 +124,30 @@ while True:
 
 
 
+##############################################################################
 
+def startProxy(self, mode):
+    proxyCommand = [
+        'python',
+        os.path.join(self.basepath, 'proxy.xmpp.py'),
+        '--socket', self.proxyName, # proxy name used for socket channel
+        '--uidname', self.user[0],
+        '--gidname', self.user[1],
+    ]
 
-
-
-
-
+    if mode == 's':
+        proxyCommand += [
+            '--peer', self.proxyConfig["client"]["jid"],
+            '--jid', self.proxyConfig["server"]["jid"],
+            '--password', self.proxyConfig["server"]["password"],
+        ]
+    else:
+        proxyCommand += [
+            '--peer', self.proxyConfig["server"]["jid"],
+            '--jid', self.proxyConfig["client"]["jid"],
+            '--password', self.proxyConfig["client"]["password"],
+        ]
+    
+    return proxyCommand
 
 

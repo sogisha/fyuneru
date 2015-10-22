@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-class ProxyConfig
+class ProxyProcess
 
-Receives proxy configurations and return the command for initiating the
-process.
+Receives proxy configurations and return the class for initiating the process.
 
 This class manages the drivers of different types of proxies. To write a new
 proxy, a driver is necessary to be included here. 
@@ -15,24 +14,24 @@ the user doesn't have to maintain them on their own.
 """
 import os
 import sys
+from multiprocessing import Process, Pipe
 
-from drv_shadowsocks import proxyCommand as proxyCommandShadowsocks
-#from drv_websocket   import proxyCommand as proxyCommandWebsocket  ## not usable
-from drv_xmpp        import proxyCommand as proxyCommandXMPP
+
+from __shadowsocks import proxyCommand as proxyCommandShadowsocks
+from __xmpp        import proxyCommand as proxyCommandXMPP
 
 proxyCommands = {\
     "shadowsocks": proxyCommandShadowsocks,
-#    "websocket": proxyCommandWebsocket,
     "xmpp": proxyCommandXMPP,
 }
 
 
 ##############################################################################
 
-class ProxyConfigException(Exception):
+class ProxyProcessException(Exception):
     pass
 
-class ProxyConfig:
+class ProxyProcess:
     
     def __init__(self, **args):
         self.user = args["user"]
@@ -42,13 +41,13 @@ class ProxyConfig:
         self.proxyName = args["name"]
         self.proxyConfig = args["config"]
 
-    def getInitCommand(self, mode):
+    def start(self, mode):
         if not mode in ['s', 'c']:
             raise ProxyConfigException("Mode should be either 'c' or 's'.")
 
         if proxyCommands.has_key(self.proxyType):
             return proxyCommands[self.proxyType](self, mode)
 
-        raise ProxyConfigException("Unsupported proxy type: %s" % \
+        raise ProxyProcessException("Unsupported proxy type: %s" % \
             self.proxyType
         )
