@@ -17,27 +17,9 @@ import os
 import argparse
 import signal
 from select import select
+from logging import info, warning, debug, error
 
 import xmpp
-
-def log(x):
-    print "proxy-xmpp-client: %s" % x
-
-# ----------- parse arguments
-
-parser = argparse.ArgumentParser()
-
-# drop privilege to ...
-parser.add_argument("--uidname", metavar="UID_NAME", type=str, required=True)
-parser.add_argument("--gidname", metavar="GID_NAME", type=str, required=True)
-
-parser.add_argument("--socket", type=str, required=True)
-parser.add_argument("--peer", type=str, required=True)
-parser.add_argument("--jid", type=str, required=True)
-parser.add_argument("--password", type=str, required=True)
-
-args = parser.parse_args()
-
 
 ##############################################################################
 
@@ -92,62 +74,48 @@ class SocketXMPPProxy:
 
 ##############################################################################
 
-proxy = SocketXMPPProxy(args.jid, args.password, args.peer)
+MODE_SERVER = 's'
+MODE_CLIENT = 'c'
 
-sockets = {
-    proxy.xmpp.Connection._sock: 'proxy',
-    local: 'local',
-}
+def start(mode, pipe, **kwargs):
+    config = kwargs["config"]
 
-while True:
-    try:
-        local.heartbeat()
-        r, w, _ = select(sockets.keys(), [], [], 1)
-        for each in r:
-            if sockets[each] == 'proxy':
+    if MODE_CLIENT == mode:
+        peer = config["server"]["jid"]
+        jid = config["client"]["jid"]
+        password = config["client"]["password"]
+    elif MODE_SERVER == mode:
+        peer = config["client"]["jid"]
+        jid = config["server"]["jid"]
+        password = config["server"]["password"]
+    else:
+        raise Exception("Invalid mode for starting XMPP process.")
+
+    proxy = SocketXMPPProxy(jid, password, peer)
+    socket = proxy.xmpp.Connection._sock
+
+    while True:
+        try:
+            # wait to read some data from xmpp side 
+            r = select([socket], [], [], 0.5)[0]
+            if len(r) > 0:
+                r = r[0]
                 proxy.xmpp.Process(1)
                 for b in proxy.recvQueue:
-                    log("Received %d bytes, sending to core." % len(b))
-                    local.send(b)
+                    debug("Received %d bytes, sending to core." % len(b))
+                    pipe.send(b)
                 proxy.recvQueue = []
+            
+            # wait to read some data from core
+            try:
+                coreSent = pipe.get(True, 0.5)
+                proxy.send(coreSent)
+                debug("Received %d bytes, sending to tunnel." % len(coreSent))
+            except:
+                continue
 
-            if sockets[each] == 'local':
-                recv = local.receive()
-                if not recv: continue
-                log("Received %d bytes, sending to tunnel." % len(recv))
-                proxy.send(recv)
-
-
-    except KeyboardInterrupt:
-        doExit(None,None)
-
-
-
-
-##############################################################################
-
-def startProxy(self, mode):
-    proxyCommand = [
-        'python',
-        os.path.join(self.basepath, 'proxy.xmpp.py'),
-        '--socket', self.proxyName, # proxy name used for socket channel
-        '--uidname', self.user[0],
-        '--gidname', self.user[1],
-    ]
-
-    if mode == 's':
-        proxyCommand += [
-            '--peer', self.proxyConfig["client"]["jid"],
-            '--jid', self.proxyConfig["server"]["jid"],
-            '--password', self.proxyConfig["server"]["password"],
-        ]
-    else:
-        proxyCommand += [
-            '--peer', self.proxyConfig["server"]["jid"],
-            '--jid', self.proxyConfig["client"]["jid"],
-            '--password', self.proxyConfig["client"]["password"],
-        ]
-    
-    return proxyCommand
-
-
+        except KeyboardInterrupt:
+            break
+        except:
+            break
+    return

@@ -12,9 +12,6 @@ initializing the proxy subprocesses(more details defined in module
 from distutils.version import StrictVersion
 from json import loads
 
-from proxyconf import ProxyConfig
-from intsck import getUNIXSocketPathByName 
-
 VERSION_REQUIREMENT = "1.1" # required version of `config.json`
 
 ##############################################################################
@@ -69,22 +66,24 @@ class Configuration:
     def getProxyConfig(self, name):
         if not self.__proxies.has_key(name):
             raise ConfigFileException("No such proxy method defined.")
+
         proxyConfig = self.__proxies[name]
         proxyType = proxyConfig["type"]
-        return ProxyConfig(\
-            user=self.user,
-            name=name,
-            type=proxyType, 
-            config=proxyConfig,
-            key=self.key
-        )
+        return {
+            "user": self.user,
+            "mode": self.mode,
+            "name": name,
+            "type": proxyType, 
+            "config": proxyConfig,
+            "key": self.key,
+        }
 
-    def getCoreCommand(self, mode, user, debug=False):
+    def getCoreCommand(self, user, debug=False):
         """Generates a command for starting `tunnel.py`.
         * `mode`: either `s` for server, or `c` for client.
         * `user`: (str, str), for (uid-name, gid-name), as which the program
                   will run after root privileges is no more necessary."""
-        if mode == 's':
+        if self.mode == 's':
             role = 'server'
         else:
             role = 'client'
@@ -102,7 +101,15 @@ class Configuration:
             coreCommand.append('--debug')
         return coreCommand
 
-    def __init__(self, config):
+    def __init__(self, mode, config):
+        # set mode for reading config file
+        if 's' == mode:
+            self.mode = 'server'
+        elif 'c' == mode:
+            self.mode = 'client'
+        else:
+            raise ConfigFileException("`mode` must be either 'c' or 's'")
+
         # try load the configuration file string, and parse into JSON.
         try:
             json = loads(config)

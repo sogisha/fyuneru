@@ -14,40 +14,87 @@ the user doesn't have to maintain them on their own.
 """
 import os
 import sys
-from multiprocessing import Process, Pipe
+import random # replace with secure randomness
+from multiprocessing import Process, Queue
 
 
-from __shadowsocks import proxyCommand as proxyCommandShadowsocks
-from __xmpp        import proxyCommand as proxyCommandXMPP
+from __shadowsocks import start as startCommandShadowsocks
+from __xmpp        import start as startCommandXMPP
 
 proxyCommands = {\
-    "shadowsocks": proxyCommandShadowsocks,
-    "xmpp": proxyCommandXMPP,
+    "shadowsocks": startCommandShadowsocks,
+    "xmpp": startCommandXMPP,
 }
 
 
 ##############################################################################
 
-class ProxyProcessException(Exception):
-    pass
+class ProxyProcessException(Exception): pass
 
-class ProxyProcess:
+class ProxyProcessManager:
+
+    __processes = {}
+    __proxy2core = None
     
     def __init__(self, **args):
-        self.user = args["user"]
-        self.basepath = os.path.realpath(os.path.dirname(sys.argv[0]))
-        self.baseKey = args["key"]
-        self.proxyType = args["type"]
-        self.proxyName = args["name"]
-        self.proxyConfig = args["config"]
+        self.__proxy2core = Queue()
 
-    def start(self, mode):
-        if not mode in ['s', 'c']:
-            raise ProxyConfigException("Mode should be either 'c' or 's'.")
+    def start(self, proxyconf):
+        """Start a process using a return value from
+        ..util.config.Configuration.getProxyConfig"""
 
-        if proxyCommands.has_key(self.proxyType):
-            return proxyCommands[self.proxyType](self, mode)
-
-        raise ProxyProcessException("Unsupported proxy type: %s" % \
-            self.proxyType
+        proxyType = proxyconf["type"]
+        
+        if not proxyCommands.has_key(proxyType):
+            raise ProxyProcessException("Unsupported proxy type: %s" % \
+                proxyType
+            )
+        
+        processName = proxyconf["name"]
+        processMode = proxyconf["mode"]
+        processFunc = proxyCommands(proxyconf)
+        processQueue = Queue()
+        
+        newProcess = Process(\
+            target=processFunc, 
+            args=(\
+                processMode, 
+                (self.__proxy2core, processQueue),
+                config=proxyconf["config"]
+            )
         )
+        newProcess.start()
+
+        self.__processes[name] = (processPipe, newProcess)
+
+    def __removeProcesses(self):
+        # remove processes that are ended
+        removeList = []
+        for each in self.__processes:
+            _, proc = self.__processes[each]
+            if not proc.is_alive():
+                removeList.append(each)
+        for each in removeList:
+            del self.__processes[each]
+
+    def send(self, buf):
+        """Non-blocks sending a buffer to randomly one of the started
+        processes."""
+        self.__removeProcesses()
+        try:
+            # this may not always work, since process may still now exit
+            keys = self.__processes.keys()
+            key = keys[random.randrange(0, len(keys))]
+            queue, _ = self.__processes[key]
+            queue.put(buf)
+        except Exception,e
+            print e
+
+    def recv(self):
+        """Non-blocks retrieving a buffer returned from one of the started
+        processes."""
+        try:
+            buf = self.__proxy2core.get(False)
+        except:
+            return None
+        return buf
