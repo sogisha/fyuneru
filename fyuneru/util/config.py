@@ -78,28 +78,20 @@ class Configuration:
             "key": self.key,
         }
 
-    def getCoreCommand(self, user, debug=False):
-        """Generates a command for starting `tunnel.py`.
-        * `mode`: either `s` for server, or `c` for client.
-        * `user`: (str, str), for (uid-name, gid-name), as which the program
-                  will run after root privileges is no more necessary."""
-        if self.mode == 's':
-            role = 'server'
-        else:
-            role = 'client'
-        coreCommand = [\
-            'python', 'tunnel.py',
-            '--uidname', user[0],
-            '--gidname', user[1],
-            '--role', role, 
-            '--server-ip', self.serverIP,
-            '--client-ip', self.clientIP,
-            '--key', self.key,
-        ]
-        coreCommand += self.__proxies.keys()
-        if debug:
-            coreCommand.append('--debug')
-        return coreCommand
+    def getCoreConfig(self):
+        """Generates a config profile for starting core process."""
+        ret = {
+            "netmask": "255.255.255.0",
+            "key": self.key,
+            "user": self.user,
+        }
+        if 'server' == self.mode:   # server mode
+            ret["ip"] = self.serverIP
+            ret["dstip"] = self.clientIP
+        else:                       # client mode
+            ret["ip"] = self.clientIP
+            ret["dstip"] = self.serverIP
+        return ret 
 
     def __init__(self, mode, config):
         # set mode for reading config file

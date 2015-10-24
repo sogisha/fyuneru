@@ -6,17 +6,18 @@ from select import select
 
 from pytun import TunTapDevice
 
-from ..util import crypto
+from ..util import crypto, droproot
+
 
 
 class VirtualNetworkInterface:
     
-    def __init__(self, key, config):
+    def __init__(self, config):
         self.__tun = TunTapDevice()
         self.__tun.addr = config["ip"]
         self.__tun.dstaddr = config["dstip"]
         self.__tun.netmask = config["netmask"]
-        self.__crypto = crypto.Crypto(key)
+        self.__crypto = crypto.Crypto(config["key"])
 
     def up(self):
         self.__tun.up()
@@ -42,8 +43,9 @@ class VirtualNetworkInterface:
 
 
 
-def __vNetProcess(pipe, key, config):
+def __vNetProcess(pipe, config):
     tun = VirtualNetworkInterface(config)
+    droproot.dropRoot(*config["user"])
     
     selects = {tun: "tun", pipe: "pipe"}
     while True:
@@ -60,8 +62,8 @@ def __vNetProcess(pipe, key, config):
     return        
    
 
-def start(key, config):
+def start(config):
     pipeA, pipeB = Pipe()
-    proc = Process(target=__vNetProcess, args=(key, pipeB, config))
+    proc = Process(target=__vNetProcess, args=(pipeB, config))
     proc.start()
     return (pipeA, proc)
