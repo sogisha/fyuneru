@@ -18,11 +18,11 @@ import random # replace with secure randomness
 from multiprocessing import Process, Queue
 
 
-from __shadowsocks import start as startCommandShadowsocks
+#from __shadowsocks import start as startCommandShadowsocks
 from __xmpp        import start as startCommandXMPP
 
 proxyCommands = {\
-    "shadowsocks": startCommandShadowsocks,
+#    "shadowsocks": startCommandShadowsocks,
     "xmpp": startCommandXMPP,
 }
 
@@ -44,6 +44,7 @@ class ProxyProcessManager:
         ..util.config.Configuration.getProxyConfig"""
 
         proxyType = proxyconf["type"]
+        if proxyType != 'xmpp': return # XXX TODO remove this line. debug only.
         
         if not proxyCommands.has_key(proxyType):
             raise ProxyProcessException("Unsupported proxy type: %s" % \
@@ -52,7 +53,7 @@ class ProxyProcessManager:
         
         processName = proxyconf["name"]
         processMode = proxyconf["mode"]
-        processFunc = proxyCommands(proxyconf)
+        processFunc = proxyCommands[proxyType]
         processQueue = Queue()
         
         newProcess = Process(\
@@ -60,12 +61,12 @@ class ProxyProcessManager:
             args=(\
                 processMode, 
                 (self.__proxy2core, processQueue),
-                config=proxyconf["config"]
+                proxyconf["config"]
             )
         )
         newProcess.start()
 
-        self.__processes[name] = (processPipe, newProcess)
+        self.__processes[processName] = (processQueue, newProcess)
 
     def __removeProcesses(self):
         # remove processes that are ended
@@ -87,7 +88,7 @@ class ProxyProcessManager:
             key = keys[random.randrange(0, len(keys))]
             queue, _ = self.__processes[key]
             queue.put(buf)
-        except Exception,e
+        except Exception,e:
             print e
 
     def recv(self):

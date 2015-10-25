@@ -56,25 +56,15 @@ confuse an observer, e.g. a firewall.
 
 1. Operating System: currently tested over Fedora 21 and Ubuntu 14.04;
 1. Installed Python2 environment;
-1. NodeJS is required by some proxies.
 
 ### Dependencies
-
-#### Core
 
 1. `python-pytun`, a python module used for setting up TUN devices. Use
    `sudo pip install python-pytun` to get this.
 1. `salsa20`, a python module providing encryption for our program. Use
    `sudo pip install salsa20` to get this.
-
-#### Proxies
-
-For different proxies, you may need proxy-specific dependencies.
-
-Following proxies are written in NodeJS. Install NodeJS, and run `npm install`
-in the corresponding path to get dependencies installed.
-
-1. `proxies/websocket`
+1. `xmpppy`, I've been using the one installed with:
+     pip install git+https://github.com/ArchipelProject/xmpppy
 
 ## Usage
 
@@ -214,21 +204,12 @@ Fyuneru有两个部分：核心，和一系列代理。
 
 ### 依赖的文件
 
-#### 核心程序
-
 1. `python-pytun`, 一个用来设定TUN设备的模块。
    使用命令`sudo pip install python-pytun`来安装这一模块。
 1. `salsa20`，一个Python模块，为我们的程序提供加密服务。
    使用`sudo pip install salsa20`来安装这一模块。
-
-#### 代理程序
-
-对于不同的代理，还有具体的依赖性。
-
-如下代理使用NodeJS编写。
-首先安装NodeJS，然后在各自的目录中用`npm install`安装依赖文件。
-
-1. `proxies/websocket`
+1. `xmpppy`, 我使用如下命令安装：
+    pip install git+https://github.com/ArchipelProject/xmpppy
 
 ## 用法
 

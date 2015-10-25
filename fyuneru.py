@@ -11,6 +11,7 @@ import sys
 from fyuneru.util.config import Configuration
 from fyuneru.util.droproot import dropRoot
 from fyuneru.vnet import start as startVNet
+from fyuneru.proxies import ProxyProcessManager
 
 
 logging.basicConfig(level=logging.INFO)
@@ -42,5 +43,17 @@ config = Configuration(\
 
 ##############################################################################
 
-vnetPipe, vnetProc = startVNet(config.getCoreConfig())
+# start virtual network interface and drop root
 
+vnetPipe, vnetProc = startVNet(config.getCoreConfig())
+dropRoot(*config.user)
+
+##############################################################################
+
+# start proxies
+
+proxyManager = ProxyProcessManager()
+for each in config.listProxies():
+    proxyManager.start(config.getProxyConfig(each))
+
+# 

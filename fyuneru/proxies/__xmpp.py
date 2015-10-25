@@ -74,12 +74,10 @@ class SocketXMPPProxy:
 
 ##############################################################################
 
-MODE_SERVER = 's'
-MODE_CLIENT = 'c'
+MODE_SERVER = 'server'
+MODE_CLIENT = 'client'
 
-def start(mode, pipe, **kwargs):
-    config = kwargs["config"]
-
+def start(mode, pipe, config):
     if MODE_CLIENT == mode:
         peer = config["server"]["jid"]
         jid = config["client"]["jid"]
