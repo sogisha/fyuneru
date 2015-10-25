@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from logging import info
+from logging import info, debug
 from multiprocessing import Process, Pipe
 from select import select
 
 from pytun import TunTapDevice
 
-from ..util import crypto, droproot
+from ..util import crypto, droproot, debugging
 
 
 
@@ -17,7 +17,6 @@ class VirtualNetworkInterface:
         self.__tun.addr = config["ip"]
         self.__tun.dstaddr = config["dstip"]
         self.__tun.netmask = config["netmask"]
-        self.__crypto = crypto.Crypto(config["key"])
 
     def up(self):
         self.__tun.up()
@@ -36,16 +35,19 @@ class VirtualNetworkInterface:
         return self.__tun.fileno()
 
     def write(self, buf):
-        self.__tun.write(self.__crypto.encrypt(buf))
+        self.__tun.write(buf)
 
     def read(self):
-        return self.__crypto.decrypt(self.__tun.read(65536))
+        return self.__tun.read(65536)
 
 
 
 def __vNetProcess(pipe, config):
     tun = VirtualNetworkInterface(config)
     droproot.dropRoot(*config["user"])
+
+    crypt = crypto.Crypto(config["key"])
+    encrypt, decrypt = crypt.encrypt, crypt.decrypt
     
     selects = {tun: "tun", pipe: "pipe"}
     while True:
@@ -54,11 +56,15 @@ def __vNetProcess(pipe, config):
         for each in r:
             if selects[each] == "tun":
                 buf = each.read()
-                if buf: pipe.send(buf)
+                pipe.send(encrypt(buf))
+                debug(debugging.showPacket(buf))
 
             if selects[each] == "pipe":
                 buf = each.recv()
-                tun.write(buf)
+                buf = decrypt(buf)
+                if buf:
+                    tun.write(buf)
+                    debug(debugging.showPacket(buf))
     return        
    
 

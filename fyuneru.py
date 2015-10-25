@@ -15,7 +15,7 @@ from fyuneru.vnet import start as startVNet
 from fyuneru.proxies import ProxyProcessManager
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 PATH = os.path.realpath(os.path.dirname(sys.argv[0]))
 
