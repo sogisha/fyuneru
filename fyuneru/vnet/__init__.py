@@ -35,10 +35,10 @@ class VirtualNetworkInterface:
     def fileno(self):
         return self.__tun.fileno()
 
-    def write(buf):
+    def write(self, buf):
         self.__tun.write(self.__crypto.encrypt(buf))
 
-    def read():
+    def read(self):
         return self.__crypto.decrypt(self.__tun.read(65536))
 
 
