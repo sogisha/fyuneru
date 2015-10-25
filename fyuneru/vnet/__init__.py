@@ -57,14 +57,14 @@ def __vNetProcess(pipe, config):
             if selects[each] == "tun":
                 buf = each.read()
                 pipe.send(encrypt(buf))
-                debug(debugging.showPacket(buf))
+                debug("SEND: \n%s\n" % debugging.showPacket(buf))
 
             if selects[each] == "pipe":
                 buf = each.recv()
                 buf = decrypt(buf)
                 if buf:
                     tun.write(buf)
-                    debug(debugging.showPacket(buf))
+                    debug("RECV: \n%s\n" % debugging.showPacket(buf))
     return        
    
 
