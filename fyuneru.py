@@ -7,6 +7,7 @@ from logging import info, debug, warning, error, critical
 import os
 import signal
 import sys
+from select import select
 
 from fyuneru.util.config import Configuration
 from fyuneru.util.droproot import dropRoot
@@ -56,4 +57,18 @@ proxyManager = ProxyProcessManager()
 for each in config.listProxies():
     proxyManager.start(config.getProxyConfig(each))
 
-# 
+##############################################################################
+
+while True:
+    r, w, _ = select([vnetPipe], [], [], 0.1)
+
+    if len(r) > 0:
+        try:
+            tunread = r.read()
+            proxyManager.send(tunread)
+        except:
+            pass
+
+    netread = proxyManager.recv()
+    if netread:
+        vnetPipe.write(netread)

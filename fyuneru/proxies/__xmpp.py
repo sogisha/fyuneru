@@ -77,7 +77,7 @@ class SocketXMPPProxy:
 MODE_SERVER = 'server'
 MODE_CLIENT = 'client'
 
-def start(mode, pipe, config):
+def start(mode, queuePair, config):
     if MODE_CLIENT == mode:
         peer = config["server"]["jid"]
         jid = config["client"]["jid"]
@@ -88,6 +88,8 @@ def start(mode, pipe, config):
         password = config["server"]["password"]
     else:
         raise Exception("Invalid mode for starting XMPP process.")
+
+    queueProxy2Core, queueCore2Proxy = queuePair
 
     proxy = SocketXMPPProxy(jid, password, peer)
     socket = proxy.xmpp.Connection._sock
@@ -101,14 +103,14 @@ def start(mode, pipe, config):
                 proxy.xmpp.Process(1)
                 for b in proxy.recvQueue:
                     debug("Received %d bytes, sending to core." % len(b))
-                    pipe.send(b)
+                    queueProxy2Core.put(b)
                 proxy.recvQueue = []
             
             # wait to read some data from core
             try:
-                coreSent = pipe.get(True, 0.5)
-                proxy.send(coreSent)
+                coreSent = queueCore2Proxy.get(True, 0.5)
                 debug("Received %d bytes, sending to tunnel." % len(coreSent))
+                proxy.send(coreSent)
             except:
                 continue
 
