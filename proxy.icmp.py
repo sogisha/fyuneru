@@ -3,29 +3,26 @@
 ICMP Proxy Process
 ==================
 
-This proxy utilizes the `xmpppy` library. You have to first install it before
-using this. If
-    
-    sudo pip install xmpppy
+This is a very simple proxy that puts our encrypted payloads into ICMP packets.
+Since encrypted payloads will be recognized using cryptographical means, we
+won't do anything on the payload.
 
-doesn't work, you may have to download it from <http://xmpppy.sourceforge.net>
-and install manually.
-
-> > > CURRENTLY UNDER DEVELOPEMENT...
+ICMP Proxy is currently only one-way: client->server is okay, reverse is not
+supported. You have to use other means of proxies to get replied.
 """
+# TODO: modify fyuneru.intsck to make server not try to use this tunnel as
+# answer.
 
 
 import argparse
 import signal
 from select import select
 
-import xmpp
-
 from fyuneru.intsck import InternalSocketClient
 from fyuneru.droproot import dropRoot
 
 def log(x):
-    print "proxy-xmpp-client: %s" % x
+    print "proxy-icmp-client: %s" % x
 
 # ----------- parse arguments
 
@@ -35,69 +32,22 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--uidname", metavar="UID_NAME", type=str, required=True)
 parser.add_argument("--gidname", metavar="GID_NAME", type=str, required=True)
 
-parser.add_argument("--socket", type=str, required=True)
-parser.add_argument("--peer", type=str, required=True)
-parser.add_argument("--jid", type=str, required=True)
-parser.add_argument("--password", type=str, required=True)
+parser.add_argument("--client-send-to", type=str, required=False)
 
 args = parser.parse_args()
 
-dropRoot(args.uidname, args.gidname)
 
 ##############################################################################
 
-class SocketXMPPProxyException(Exception): pass
+if None == args.client_send_to:
+    # run as server mode
+    sck = socket.socket(socket.AF_INET,socket.SOCK_RAW,socket.IPPROTO_ICMP)
+    sck.setsockopt(socket.SOL_IP, socket.IP_HDRINCL, 1)
+    dropRoot(args.uidname, args.gidname)
+else:
+    # run as client mode
+    pass
 
-class SocketXMPPProxy:
-
-    def __init__(self, jid, password, peer):
-        self.__jid = xmpp.protocol.JID(jid)
-        self.__peer = xmpp.protocol.JID(peer)
-        self.__peerJIDStripped = self.__peer.getStripped()
-
-        self.xmpp = xmpp.Client(\
-            self.__jid.getDomain(),
-            debug=["always", "socket", "nodebuilder", "dispatcher"]
-        )
-        connection = self.xmpp.connect()
-        if not connection:
-            raise SocketXMPPProxyException("Unable to connect.")
-
-        authentication = self.xmpp.auth(\
-            self.__jid.getNode(),
-            password
-        )
-        if not authentication:
-            raise SocketXMPPProxyException("Authentication error.")
-
-        self.__registerHandlers()
-        self.__sendPresence()
-
-    def __registerHandlers(self):
-        self.xmpp.RegisterHandler('message', self.message)
-
-    def __sendPresence(self):
-        presence = xmpp.protocol.Presence(priority=999)
-        self.xmpp.send(presence)
-
-    recvQueue = []
-
-    def message(self, con, event):
-        msgtype = event.getType()
-        fromjid = event.getFrom().getStripped()
-        if fromjid != self.__peerJIDStripped: return
-        if msgtype in ('chat', 'normal', None):
-            body = event.getBody()
-            self.recvQueue.append(body.decode('base64'))
-
-    def send(self, buf):
-        buf = buf.encode('base64')
-        message = xmpp.protocol.Message(to=self.__peer, body=buf, typ='chat')
-        self.xmpp.send(message)
-
-##############################################################################
-
-proxy = SocketXMPPProxy(args.jid, args.password, args.peer)
 local = InternalSocketClient(args.socket)
 
 ##############################################################################

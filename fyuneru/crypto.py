@@ -133,7 +133,10 @@ if __name__ == '__main__':
     import time
     a = time.time()
     for x in xrange(0, 1024):
-        encrypted = encryptor.encrypt('a' * 1500)
+        encrypted = encryptor.encrypt('a' * 400)
+        decrypted = encryptor.decrypt(encrypted)
+        if not decrypted:
+            print "*"
     b = time.time()
     print "done in %f seconds" % (b-a)
 #    print len(encrypted), decryptor.decrypt(encrypted)
