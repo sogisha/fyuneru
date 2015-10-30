@@ -9,8 +9,6 @@ using this. If
 
 doesn't work, you may have to download it from <http://xmpppy.sourceforge.net>
 and install manually.
-
-> > > CURRENTLY UNDER DEVELOPEMENT...
 """
 
 
@@ -20,8 +18,8 @@ from select import select
 
 import xmpp
 
-from fyuneru.intsck import InternalSocketClient
-from fyuneru.droproot import dropRoot
+from fyuneru.net.intsck import InternalSocketClient
+from fyuneru.util.droproot import dropRoot
 
 def log(x):
     print "proxy-xmpp-client: %s" % x

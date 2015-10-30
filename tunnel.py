@@ -7,12 +7,12 @@ import signal
 import logging
 from logging import info, debug, warning, error, critical
 
-from fyuneru.vnet import VirtualNetworkInterface
-from fyuneru.crypto import randint
-from fyuneru.debug import showPacket
-from fyuneru.droproot import dropRoot
-from fyuneru.protocol import DataPacket, DataPacketException
-from fyuneru.intsck import InternalSocketServer
+from fyuneru.net.vnet import VirtualNetworkInterface
+from fyuneru.util.crypto import randint
+from fyuneru.util.debug import showPacket
+from fyuneru.util.droproot import dropRoot
+from fyuneru.net.protocol import DataPacket, DataPacketException
+from fyuneru.net.intsck import InternalSocketServer
 
 ##############################################################################
 

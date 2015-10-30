@@ -10,9 +10,9 @@ import signal
 import subprocess
 import sys
 
-from fyuneru.procmgr import ProcessManager 
-from fyuneru.config import Configuration
-from fyuneru.droproot import dropRoot
+from fyuneru.util.procmgr import ProcessManager 
+from fyuneru.util.config import Configuration
+from fyuneru.util.droproot import dropRoot
 
 
 logging.basicConfig(level=logging.INFO)

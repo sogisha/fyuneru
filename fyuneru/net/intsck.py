@@ -16,7 +16,7 @@ from logging import debug, info, warning, error
 from time import time
 from struct import pack, unpack
 from socket import socket, AF_UNIX, SOCK_DGRAM
-from fyuneru.crypto import Crypto
+from ..util.crypto import Crypto
 
 
 UDPCONNECTOR_WORD = \

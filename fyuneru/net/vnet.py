@@ -3,29 +3,45 @@
 import os
 import fcntl
 import struct
-from logging import info, debug
+from logging import info, debug, critical, exception
 from select import select
 
 TUNSETIFF = 0x400454ca  
-IFF_TUN   = 0x0001
+IFF_TUN   = 0x0001      # Set up TUN device
+IFF_TAP   = 0x0002      # Set up TAP device
+IFF_NO_PI = 0x1000      # Without this flag, received frame will have 4 bytes
+                        # for flags and protocol(each 2 bytes)
 
+class VirtualNetworkInterfaceException(Exception): pass
 
 class VirtualNetworkInterface:
 
     mtu = 1200
     netmask = "255.255.255.0"
 
+    def __getTUNDeviceLocation(self):
+        if os.path.exists("/dev/net/tun"): return "/dev/net/tun"
+        if os.path.exists("/dev/tun"): return "/dev/tun"
+        critical("TUN/TAP device not found on this OS!")
+        raise VirtualNetworkInterfaceException("No TUN/TAP device.")
+
     def __init__(self, ip, dstip, netmask="255.255.255.0"):
         self.addr = ip 
         self.dstaddr = dstip
         self.netmask = netmask
 
-        self.__tun = os.open("/dev/net/tun", os.O_RDWR)
-        tun = fcntl.ioctl(\
-            self.__tun,
-            TUNSETIFF,
-            struct.pack("16sH", "t%d", IFF_TUN)
-        )
+        try:
+            self.__tun = os.open(self.__getTUNDeviceLocation(), os.O_RDWR)
+            tun = fcntl.ioctl(\
+                self.__tun,
+                TUNSETIFF,
+                struct.pack("16sH", "fyuneru-%d", IFF_TUN)
+            )
+        except Exception,e:
+            exception(e)
+            raise VirtualNetworkInterfaceException(\
+                "Cannot set TUN/TAP device."
+            )
         self.name = tun[:16].strip("\x00")  
 
     def up(self):
