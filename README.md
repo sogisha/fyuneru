@@ -62,8 +62,6 @@ confuse an observer, e.g. a firewall.
 
 #### Core
 
-1. `python-pytun`, a python module used for setting up TUN devices. Use
-   `sudo pip install python-pytun` to get this.
 1. `salsa20`, a python module providing encryption for our program. Use
    `sudo pip install salsa20` to get this.
 
@@ -216,8 +214,6 @@ Fyuneru有两个部分：核心，和一系列代理。
 
 #### 核心程序
 
-1. `python-pytun`, 一个用来设定TUN设备的模块。
-   使用命令`sudo pip install python-pytun`来安装这一模块。
 1. `salsa20`，一个Python模块，为我们的程序提供加密服务。
    使用`sudo pip install salsa20`来安装这一模块。
 
