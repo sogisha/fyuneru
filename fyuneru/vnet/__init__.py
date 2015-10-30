@@ -6,8 +6,6 @@ import struct
 from logging import info, debug
 from select import select
 
-from pytun import TunTapDevice
-
 TUNSETIFF = 0x400454ca  
 IFF_TUN   = 0x0001
 
