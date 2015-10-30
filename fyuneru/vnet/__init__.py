@@ -15,10 +15,10 @@ class VirtualNetworkInterface:
     mtu = 1200
     netmask = "255.255.255.0"
 
-    def __init__(self, config):
-        self.addr = config["ip"]
-        self.dstaddr = config["dstip"]
-        self.netmask = config["netmask"]
+    def __init__(self, ip, dstip, netmask="255.255.255.0"):
+        self.addr = ip 
+        self.dstaddr = dstip
+        self.netmask = netmask
 
         self.__tun = os.open("/dev/net/tun", os.O_RDWR)
         tun = fcntl.ioctl(\
@@ -29,9 +29,6 @@ class VirtualNetworkInterface:
         self.name = tun[:16].strip("\x00")  
 
     def up(self):
-#        os.system("ip link set %s up" % (self.name))  
-#        os.system("ip link set %s mtu %d" % (self.name, self.mtu))  
-#        os.system("ip addr add %s dev %s" % (self.addr, self.name))  
         os.system("ifconfig %s inet %s netmask %s pointopoint %s" %\
             (self.name, self.addr, self.netmask, self.dstaddr)
         )
@@ -50,6 +47,18 @@ class VirtualNetworkInterface:
 
     def fileno(self):
         return self.__tun
+
+    def write(self, buf):
+        os.write(self.__tun, buf)
+
+    def read(self, size=65536):
+        return os.read(self.__tun, size)
+
+    def close(self):
+        try:
+            os.close(self.__tun)
+        except:
+            pass
 
 if __name__ == "__main__":
     vn = VirtualNetworkInterface({\

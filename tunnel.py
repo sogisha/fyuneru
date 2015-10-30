@@ -7,8 +7,7 @@ import signal
 import logging
 from logging import info, debug, warning, error, critical
 
-from pytun import TunTapDevice
-
+from fyuneru.vnet import VirtualNetworkInterface
 from fyuneru.crypto import randint
 from fyuneru.debug import showPacket
 from fyuneru.droproot import dropRoot
@@ -86,15 +85,12 @@ else:
 
 # ---------- config TUN device
 
-tun = TunTapDevice()
 if "client" == args.role:
     info("Running as client.")
-    tun.addr = args.client_ip #"10.1.0.2"
-    tun.dstaddr = args.server_ip #"10.1.0.1"
+    tun = VirtualNetworkInterface(args.client_ip, args.server_ip)
 else:
     info("Running as server.")
-    tun.addr = args.server_ip #"10.1.0.1"
-    tun.dstaddr = args.client_ip #"10.1.0.2"
+    tun = VirtualNetworkInterface(args.server_ip, args.client_ip)
 tun.netmask = "255.255.255.0"
 tun.mtu = MTU
 
