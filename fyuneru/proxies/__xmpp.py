@@ -100,7 +100,7 @@ def start(mode, queuePair, config):
                 r = r[0]
                 proxy.xmpp.Process(1)
                 for b in proxy.recvQueue:
-                    debug("Received %d bytes, sending to core." % len(b))
+                    debug("XMPP: From tunnel received %d bytes." % len(b))
                     queuePair.send(b)
                 proxy.recvQueue = []
             
@@ -109,8 +109,7 @@ def start(mode, queuePair, config):
                 coreSent = queuePair.recv()
                 if coreSent:
                     debug(\
-                        "Received %d bytes, sending to tunnel." %\
-                        len(coreSent)
+                        "XMPP: From core received %d bytes." % len(coreSent)
                     )
                     proxy.send(coreSent)
             except:

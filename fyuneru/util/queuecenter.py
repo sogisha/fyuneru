@@ -145,6 +145,8 @@ class QueueCenter:
     def recv(self):
         """Check for an object from anyone of the processes."""
         try:
-            return self.__recvQueue.get_nowait()
+            got = self.__recvQueue.get_nowait()
+            debug("1 Object received from main receiving queue.")
+            return got
         except Empty:
             return None
