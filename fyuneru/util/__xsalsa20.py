@@ -1,27 +1,33 @@
 """
-XSalsa20 Cipher Implementation in Pure Python
-=============================================
+Modified XSalsa20/16 Cipher Implementation in Pure Python
+======================================================
 
-This library provides a pure python implementation of XSalsa20 cipher.
+This library provides a pure python implementation of XSalsa20/16 cipher.
 
-NOTICE! This cipher uses only lower 32 bits of counter, since the higher bits
-cannot be used in our fyuneru system(we just encrypt buffer no larger than
-65536 bytes=1024 blocks).
+This library is a modification of XSalsa20 cipher and adapted for fyuneru.
+Changed is merely the nonce length from 24 bytes to 28 bytes. The extra 4 bytes
+are given as higher 32 bits of the counter, making the counter only able
+to count with 32 bits. Since our usage of this cipher uses a different nonce
+for each plaintext being encrypted, but each plaintext will not be more than
+65536 bytes(describable with just 2 bytes), this is better suited.
+
+This implementation is not audited and may have errors that lead to serious
+problems. And it's slow. 
 """
 
 import array
 import math
 
 uintArray = lambda l: array.array('I', [0] * l)
+uintArray = lambda l: [0] * l 
 
 
 class XSalsa20:
     
-    def __salsa20Core(self, uintArray16):
-        x = self.__x
-        x[:] = uintArray16[:]
+    def __salsa20Core(self, x, inbuf, oubuf):
+        for i in xrange(0, 16): x[i] = inbuf[i]
         R = lambda a,b: (((a) << (b)) | ((a) >> (32 - (b)))) & 0xFFFFFFFF 
-        for i in xrange(0, 10): # half of r(=20), r/2 rounds
+        for i in xrange(0, 8): # half of r(=16), r/2 rounds
             x[ 4] ^= R(x[ 0]+x[12], 7)
             x[ 8] ^= R(x[ 4]+x[ 0], 9)
             x[12] ^= R(x[ 8]+x[ 4],13)
@@ -54,8 +60,7 @@ class XSalsa20:
             x[13] ^= R(x[12]+x[15], 9)
             x[14] ^= R(x[13]+x[12],13)
             x[15] ^= R(x[14]+x[13],18)
-        for i in xrange(0, 16):
-            uintArray16[i] = (uintArray16[i] + x[i]) & 0xFFFFFFFF
+        for i in xrange(0, 16): oubuf[i] = (inbuf[i] + x[i]) & 0xFFFFFFFF
 
     def __streamXor(self, iv, key, buf):
         c2u = lambda src, f:\
@@ -65,47 +70,43 @@ class XSalsa20:
         len0 = len(buf)
         buf = bytearray(buf) + bytearray('0' * 64)
 
-        if len(key) != 32 or len(iv) != 24:
-            raise Exception("Key must be 32 bytes, IV must be 24 bytes")
+        if len(key) != 32 or len(iv) != 28:
+            raise Exception("Key must be 32 bytes, IV must be 28 bytes")
 
-        bkX = uintArray(16)
-        bkX[0], bkX[5], bkX[10], bkX[15] =\
-            0x61707865, 0x3320646e, 0x79622d32, 0x6b206574
-        bkX[1], bkX[2], bkX[3], bkX[4] = \
+        temp = uintArray(16)
+        b1i, b1o = uintArray(16), uintArray(16)
+        b2i, b2o = uintArray(16), uintArray(16)
+        salsa20Constants = (0x61707865, 0x3320646e, 0x79622d32, 0x6b206574)
+
+        b1i[0], b1i[5], b1i[10], b1i[15] = salsa20Constants
+        b1i[1], b1i[2], b1i[3], b1i[4] = \
             c2u(key, 0), c2u(key, 4), c2u(key, 8), c2u(key, 12)
-        bkX[11], bkX[12], bkX[13], bkX[14] = \
+        b1i[11], b1i[12], b1i[13], b1i[14] = \
             c2u(key, 16), c2u(key, 20), c2u(key, 24), c2u(key, 28)
-        bkX[6], bkX[7], bkX[8], bkX[9] = \
+        b1i[6], b1i[7], b1i[8], b1i[9] = \
             c2u(iv, 0), c2u(iv, 4), c2u(iv, 8), c2u(iv, 12)
 
-        # XSalsa20/r computes (z0,z1,...,z15) = doubleround^r/2(x0,x1,...x15).
-        self.__salsa20Core(bkX)
-        # It then builds a new 512-bit input block (x0',x1',...,x15'),...
-        bkY = uintArray(16)
-        bkY[0], bkY[5], bkY[10], bkY[15] =\
-            0x61707865, 0x3320646e, 0x79622d32, 0x6b206574
-        bkY[1], bkY[2], bkY[3], bkY[4] = bkX[0], bkX[5], bkX[10], bkX[15]
-        bkY[11], bkY[12], bkY[13], bkY[14] = bkX[6], bkX[7], bkX[8], bkX[9]
-        bkY[6], bkY[7] = c2u(iv, 16), c2u(iv, 20) # ...last 64 bits of the 192-bit nonce
-        bkY[8] = 0 # higher bits of counter, we don't need them
+        self.__salsa20Core(temp, b1i, b1o)
 
-        counter0 = 0
+        b2i[0], b2i[5], b2i[10], b2i[15] = salsa20Constants
+        b2i[1], b2i[2], b2i[3], b2i[4] = b1o[0], b1o[5], b1o[10], b1o[15]
+        b2i[11], b2i[12], b2i[13], b2i[14] = b1o[6], b1o[7], b1o[8], b1o[9]
+        b2i[6], b2i[7] = c2u(iv, 16), c2u(iv, 20) 
+        b2i[8] = c2u(iv, 24)
+
         i = 0
         output = bytearray('0' * (len0 + 64))
+        b2i[9] = 0
         while i < len0:
-            bkY[9] = counter0
-            self.__salsa20Core(bkY)
+            self.__salsa20Core(temp, b2i, b2o)
             for j in xrange(0, 16):
-                output[i+0] = buf[i+0] ^ ((bkY[j] & 0x000000FF))
-                output[i+1] = buf[i+1] ^ ((bkY[j] & 0x0000FF00) >> 8)
-                output[i+2] = buf[i+2] ^ ((bkY[j] & 0x00FF0000) >> 16)
-                output[i+3] = buf[i+3] ^ ((bkY[j] & 0xFF000000) >> 24)
+                output[i+0] = buf[i+0] ^ ((b2o[j] & 0x000000FF))
+                output[i+1] = buf[i+1] ^ ((b2o[j] & 0x0000FF00) >> 8)
+                output[i+2] = buf[i+2] ^ ((b2o[j] & 0x00FF0000) >> 16)
+                output[i+3] = buf[i+3] ^ ((b2o[j] & 0xFF000000) >> 24)
                 i += 4
-            counter0 += 1
+            b2i[9] += 1
         return str(output[:len0])
-
-    def __init__(self):
-        self.__x = uintArray(16)
 
     def encrypt(self, iv, key, buf):
         return self.__streamXor(iv, key, buf)
@@ -115,16 +116,29 @@ class XSalsa20:
 
 
 if __name__ == "__main__":
-    key = bytearray('0' * 32)
-    iv = bytearray('1' * 24)
-    buf = 'test' * 400 
+    from salsa20 import XSalsa20_xor
+
+
+    key = bytearray([0] * 32)
+    key[0] = 0x80
+    iv  = bytearray([0] * 28)
+    buf = bytearray([0] * 50)
     c = XSalsa20()
+    print c.encrypt(iv, key, buf).encode('hex')
+    print XSalsa20_xor(str(buf), str(iv)[:24], str(key)).encode('hex')
+    exit()
+
+    key = '0' * 32
+    iv = '1' * 28
+    buf = 't' * 1684 
+    c = XSalsa20()
+    repeat = 1000
 
     import time
+
     a = time.time()
-    for i in xrange(0, 100):
-        enc = c.encrypt(iv, key, buf)
-        dec = c.decrypt(iv, key, enc)
+    for i in xrange(0, repeat):
+        ourres = c.encrypt(iv, key, buf)
     b = time.time()
-    print dec == buf
-    print (100 * 400 * 4.0) / (b-a)
+
+    print len(buf) * repeat * 1.0 / (b - a)
