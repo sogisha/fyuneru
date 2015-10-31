@@ -60,6 +60,7 @@ def randint(a, b):
 
 def decidePaddingLength(bufferLength):
     global _RESULT_SIZE
+    return 0
     if bufferLength < 1500:
         randSize = randint(0, 1500)
         if randSize > bufferLength:

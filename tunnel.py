@@ -75,7 +75,7 @@ parser.add_argument(\
 args = parser.parse_args()
 
 
-MTU = 1500 
+MTU = 1400 
 UDPCONNECTOR_WORD = \
     "Across the Great Wall, we can reach every corner in the world."
 UNIX_SOCKET_NAMES = args.SOCKET_NAME
