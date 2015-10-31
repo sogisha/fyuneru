@@ -10,6 +10,9 @@ from ..util import crypto, droproot, debugging
 
 
 class VirtualNetworkInterface:
+
+    """This is a weird NetworkInterface, which nevers talks to the other
+    part of our program with plaintext."""
     
     def __init__(self, config):
         self.__tun = TunTapDevice()
@@ -32,19 +35,18 @@ class VirtualNetworkInterface:
             )
         )
 
-    def fileno(self):
-        return self.__tun.fileno()
+    def __getattr__(self, name):
+        return getattr(self.__tun, name)
 
     def send(self, buf):
-        self.__tun.write(self.__encrypt(buf))
+        """Send the buffer, which was received from proxy, to local system."""
+        buf = self.__decrypt(buf)
+        if not buf: return
+        debug("Network: SEND %d plain bytes." % len(buf))
+        self.__tun.write(buf)
 
     def recv(self):
+        """Receive a buffer from local system and encrypt it before emits."""
         buf = self.__tun.read(65536)
-        return self.__decrypt(buf)
-
-
-
-def start(config):
-    tun = VirtualNetworkInterface(config)
-    tun.up()
-    return tun
+        debug("Network: RECV %d plain bytes." % len(buf))
+        return self.__encrypt(buf)

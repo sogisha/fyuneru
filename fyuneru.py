@@ -11,7 +11,7 @@ from select import select
 
 from fyuneru.util.config import Configuration
 from fyuneru.util.droproot import dropRoot
-from fyuneru.vnet import start as startVNet
+from fyuneru.vnet import VirtualNetworkInterface 
 from fyuneru.proxies import ProxyProcesses
 
 
@@ -48,7 +48,7 @@ proxies = ProxyProcesses()
 
 # start virtual network interface and drop root
 
-vnet = startVNet(config.getCoreConfig())
+vnet = VirtualNetworkInterface(config.getCoreConfig())
 
 # drop root
 
@@ -62,3 +62,7 @@ for each in config.listProxies():
 # loop with vnet
 
 proxies.distribute(vnet)
+
+# exit loop
+
+vnet.close()
