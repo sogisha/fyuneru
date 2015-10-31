@@ -36,6 +36,10 @@ queues in multiprocessing module.
 
 class PipeDistributor:
     """
+    Distribute traffic between an IO(selectable file) with pre-created
+    subpipes by calling self.distribute(IO). This will start a loop.
+
+
                                                   __________
        Virtual Network Interface                 (          )
      __   (/dev/tun device)                     (  INTERNET  )
@@ -63,26 +67,21 @@ class PipeDistributor:
     
     __subpipes = [] 
 
-    def __init__(self):
-        self.__publicConn, self.__privateConn = Pipe()
-
-    def __getattr__(self, name):
-        return getattr(self.__publicConn, name)
-
     def newSubpipe(self):
         connA, connB = Pipe()
         self.__subpipes.append(connA)
         return connB
 
-    def loop(self):
+    def distribute(self, io):
         subpipesCount = len(self.__subpipes)
-        selects = [self.__privateConn] + self.__subpipes
+        selects = [io] + self.__subpipes
         while True:
             r, _, __ = select(selects, [], [])
             for each in r:
-                if each == self.__privateConn:
+                if each == io:
                     # if received something from outside(i.e. local TUN device)    
                     buf = each.recv()
+                    if not buf: continue
                     i = random.randrange(0, subpipesCount)
                     sendPipe = self.__subpipes[i]
                     sendPipe.send(buf)
@@ -90,7 +89,7 @@ class PipeDistributor:
                 else:
                     # if received something from subpipe(i.e. proxy)
                     buf = each.recv()
-                    self.__privateConn.send(buf)
+                    io.send(buf)
                     debug("PipeDistributor: Core --<<<<-- Proxies")
 
 ##############################################################################
@@ -133,8 +132,5 @@ class ProxyProcesses:
 
         self.__processes[processName] = newProcess
 
-    def __getattr__(self, name):
-        return getattr(self.__pipeDistributor, name)
-
-    def loop(self):
-        self.__pipeDistributor.loop()
+    def distribute(self, io):
+        self.__pipeDistributor.distribute(io)

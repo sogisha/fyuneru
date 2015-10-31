@@ -48,7 +48,7 @@ proxies = ProxyProcesses()
 
 # start virtual network interface and drop root
 
-vnetProc = startVNet(proxies, config.getCoreConfig())
+vnet = startVNet(config.getCoreConfig())
 
 # drop root
 
@@ -59,6 +59,6 @@ dropRoot(*config.user)
 for each in config.listProxies():
     proxies.start(config.getProxyConfig(each))
 
-##############################################################################
+# loop with vnet
 
-proxies.loop()
+proxies.distribute(vnet)
