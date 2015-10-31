@@ -15,15 +15,13 @@ and install manually.
 import argparse
 import signal
 from select import select
+from logging import debug
 
 import xmpp
 
 from fyuneru.net.intsck import InternalSocketClient
 from fyuneru.util.droproot import dropRoot
 from fyuneru.util.procmgr import ParentProcessWatcher
-
-def log(x):
-    print "proxy-xmpp-client: %s" % x
 
 # ----------- parse arguments
 
@@ -135,14 +133,14 @@ while True:
             if sockets[each] == 'proxy':
                 proxy.xmpp.Process(1)
                 for b in proxy.recvQueue:
-                    log("Received %d bytes, sending to core." % len(b))
+                    debug("Received %d bytes, sending to core." % len(b))
                     local.send(b)
                 proxy.recvQueue = []
 
             if sockets[each] == 'local':
                 recv = local.receive()
                 if not recv: continue
-                log("Received %d bytes, sending to tunnel." % len(recv))
+                debug("Received %d bytes, sending to tunnel." % len(recv))
                 proxy.send(recv)
 
 
