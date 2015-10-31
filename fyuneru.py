@@ -3,7 +3,7 @@
 
 import argparse
 import logging
-from logging import info, debug, warning, error, critical
+from logging import info, debug, warning, error, critical, exception
 import os
 import signal
 import sys
@@ -44,31 +44,26 @@ config = Configuration(\
 
 ##############################################################################
 
+proxyManager = ProxyProcessManager()
+
 # start virtual network interface and drop root
 
-vnetPipe, vnetProc = startVNet(config.getCoreConfig())
-dropRoot(*config.user)
+rsfuncs = (proxyManager.send, proxyManager.recv)
+vnetProc = startVNet(rsfuncs, config.getCoreConfig())
 
-##############################################################################
+# drop root
+
+dropRoot(*config.user)
 
 # start proxies
 
-proxyManager = ProxyProcessManager()
 for each in config.listProxies():
     proxyManager.start(config.getProxyConfig(each))
 
 ##############################################################################
 
 while True:
-    r, w, _ = select([vnetPipe], [], [], 0.1)
-
-    if len(r) > 0:
-        try:
-            tunread = r.read()
-            proxyManager.send(tunread)
-        except:
-            pass
-
-    netread = proxyManager.recv()
-    if netread:
-        vnetPipe.write(netread)
+    try:
+        proxyManager.process()
+    except Exception,e:
+        exception(e)

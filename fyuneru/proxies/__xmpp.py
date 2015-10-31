@@ -17,7 +17,7 @@ import os
 import argparse
 import signal
 from select import select
-from logging import info, warning, debug, error
+from logging import info, warning, debug, error, exception
 
 import xmpp
 
@@ -89,8 +89,6 @@ def start(mode, queuePair, config):
     else:
         raise Exception("Invalid mode for starting XMPP process.")
 
-    queueProxy2Core, queueCore2Proxy = queuePair
-
     proxy = SocketXMPPProxy(jid, password, peer)
     socket = proxy.xmpp.Connection._sock
 
@@ -103,19 +101,24 @@ def start(mode, queuePair, config):
                 proxy.xmpp.Process(1)
                 for b in proxy.recvQueue:
                     debug("Received %d bytes, sending to core." % len(b))
-                    queueProxy2Core.put(b)
+                    queuePair.send(b)
                 proxy.recvQueue = []
             
             # wait to read some data from core
             try:
-                coreSent = queueCore2Proxy.get(True, 0.5)
-                debug("Received %d bytes, sending to tunnel." % len(coreSent))
-                proxy.send(coreSent)
+                coreSent = queuePair.recv()
+                if coreSent:
+                    debug(\
+                        "Received %d bytes, sending to tunnel." %\
+                        len(coreSent)
+                    )
+                    proxy.send(coreSent)
             except:
                 continue
 
         except KeyboardInterrupt:
             break
-        except:
+        except Exception,e:
+            exception(e)
             break
     return

@@ -15,7 +15,10 @@ the user doesn't have to maintain them on their own.
 import os
 import sys
 import random # replace with secure randomness
-from multiprocessing import Process, Queue
+from logging import log, debug, error
+from multiprocessing import Process
+
+from ..util.queuecenter import QueueCenter
 
 
 #from __shadowsocks import start as startCommandShadowsocks
@@ -34,10 +37,9 @@ class ProxyProcessException(Exception): pass
 class ProxyProcessManager:
 
     __processes = {}
-    __proxy2core = None
     
     def __init__(self, **args):
-        self.__proxy2core = Queue()
+        self.__queueCenter = QueueCenter()
 
     def start(self, proxyconf):
         """Start a process using a return value from
@@ -54,25 +56,25 @@ class ProxyProcessManager:
         processName = proxyconf["name"]
         processMode = proxyconf["mode"]
         processFunc = proxyCommands[proxyType]
-        processQueue = Queue()
+        processQueuePair = self.__queueCenter.newProcessQueuePair()
         
         newProcess = Process(\
             target=processFunc, 
             args=(\
                 processMode, 
-                (self.__proxy2core, processQueue),
+                processQueuePair,
                 proxyconf["config"]
             )
         )
         newProcess.start()
 
-        self.__processes[processName] = (processQueue, newProcess)
+        self.__processes[processName] = newProcess
 
     def __removeProcesses(self):
         # remove processes that are ended
         removeList = []
         for each in self.__processes:
-            _, proc = self.__processes[each]
+            proc = self.__processes[each]
             if not proc.is_alive():
                 removeList.append(each)
         for each in removeList:
@@ -82,20 +84,12 @@ class ProxyProcessManager:
         """Non-blocks sending a buffer to randomly one of the started
         processes."""
         self.__removeProcesses()
-        try:
-            # this may not always work, since process may still now exit
-            keys = self.__processes.keys()
-            key = keys[random.randrange(0, len(keys))]
-            queue, _ = self.__processes[key]
-            queue.put(buf)
-        except Exception,e:
-            print e
+        return self.__queueCenter.send(buf)
 
     def recv(self):
         """Non-blocks retrieving a buffer returned from one of the started
         processes."""
-        try:
-            buf = self.__proxy2core.get(False)
-        except:
-            return None
-        return buf
+        return self.__queueCenter.recv() 
+
+    def process(self):
+        self.__queueCenter.process()

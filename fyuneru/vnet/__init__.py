@@ -42,34 +42,34 @@ class VirtualNetworkInterface:
 
 
 
-def __vNetProcess(pipe, config):
+def __vNetProcess(rsfuncs, config):
+    funcSend, funcRecv = rsfuncs
+
     tun = VirtualNetworkInterface(config)
     droproot.dropRoot(*config["user"])
 
     crypt = crypto.Crypto(config["key"])
     encrypt, decrypt = crypt.encrypt, crypt.decrypt
     
-    selects = {tun: "tun", pipe: "pipe"}
     while True:
-        r = select(selects.keys(), [], [], 1.0)[0]
-        if len(r) < 1: continue
-        for each in r:
-            if selects[each] == "tun":
-                buf = each.read()
-                pipe.send(encrypt(buf))
-                debug("SEND: \n%s\n" % debugging.showPacket(buf))
+        r = select([tun], [], [], 0.001)[0]
+        if len(r) > 0:
+            buf = tun.read()
+            funcSend(encrypt(buf))
+            debug("SEND: \n%s\n" % debugging.showPacket(buf))
 
-            if selects[each] == "pipe":
-                buf = each.recv()
-                buf = decrypt(buf)
-                if buf:
-                    tun.write(buf)
-                    debug("RECV: \n%s\n" % debugging.showPacket(buf))
+        buf = funcRecv()
+        if not buf: continue
+        buf = decrypt(buf)
+        if not buf: continue
+        tun.write(buf)
+        debug("RECV: \n%s\n" % debugging.showPacket(buf))
     return        
    
 
-def start(config):
-    pipeA, pipeB = Pipe()
-    proc = Process(target=__vNetProcess, args=(pipeB, config))
+def start(rsfuncs, config):
+    info("Creating core process...")
+    proc = Process(target=__vNetProcess, args=(rsfuncs, config))
     proc.start()
-    return (pipeA, proc)
+    info("Core process started.")
+    return proc 
