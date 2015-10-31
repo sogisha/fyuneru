@@ -18,10 +18,6 @@ from struct import pack, unpack
 from socket import socket, AF_UNIX, SOCK_DGRAM
 from ..util.crypto import Crypto
 
-
-UDPCONNECTOR_WORD = \
-    "Across the Great Wall, we can reach every corner in the world."
-
 ##############################################################################
 
 def getUNIXSocketPathByName(socketName, role):
