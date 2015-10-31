@@ -42,9 +42,7 @@ class VirtualNetworkInterface:
 
 
 
-def __vNetProcess(rsfuncs, config):
-    funcSend, funcRecv = rsfuncs
-
+def __vNetProcess(proxyIO, config):
     tun = VirtualNetworkInterface(config)
     tun.up()
     droproot.dropRoot(*config["user"])
@@ -53,24 +51,26 @@ def __vNetProcess(rsfuncs, config):
     encrypt, decrypt = crypt.encrypt, crypt.decrypt
     
     while True:
-        r = select([tun], [], [], 0.001)[0]
-        if len(r) > 0:
-            buf = tun.read()
-            funcSend(encrypt(buf))
-            debug("SEND: \n%s\n" % debugging.showPacket(buf))
-
-        buf = funcRecv()
-        if not buf: continue
-        buf = decrypt(buf)
-        if not buf: continue
-        tun.write(buf)
-        debug("RECV: \n%s\n" % debugging.showPacket(buf))
+        r = select([proxyIO, tun], [], [])[0]
+        for each in r:
+            if each == tun:
+                buf = tun.read()
+                proxyIO.send(encrypt(buf))
+                debug("SEND: \n%s\n" % debugging.showPacket(buf))
+                continue
+            if each == proxyIO:
+                buf = proxyIO.recv()
+                if not buf: continue
+                buf = decrypt(buf)
+                if not buf: continue
+                tun.write(buf)
+                debug("RECV: \n%s\n" % debugging.showPacket(buf))
     return        
    
 
-def start(rsfuncs, config):
+def start(proxyIO, config):
     info("Creating core process...")
-    proc = Process(target=__vNetProcess, args=(rsfuncs, config))
+    proc = Process(target=__vNetProcess, args=(proxyIO, config))
     proc.start()
     info("Core process started.")
     return proc 

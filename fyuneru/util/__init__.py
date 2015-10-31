@@ -5,4 +5,5 @@ __all__ = [
     "droproot",
     "procmgr",
     "protocol",
+    "piping",
 ]

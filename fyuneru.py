@@ -12,7 +12,7 @@ from select import select
 from fyuneru.util.config import Configuration
 from fyuneru.util.droproot import dropRoot
 from fyuneru.vnet import start as startVNet
-from fyuneru.proxies import ProxyProcessManager
+from fyuneru.proxies import ProxyProcesses
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -44,12 +44,11 @@ config = Configuration(\
 
 ##############################################################################
 
-proxyManager = ProxyProcessManager()
+proxies = ProxyProcesses()
 
 # start virtual network interface and drop root
 
-rsfuncs = (proxyManager.send, proxyManager.recv)
-vnetProc = startVNet(rsfuncs, config.getCoreConfig())
+vnetProc = startVNet(proxies, config.getCoreConfig())
 
 # drop root
 
@@ -58,12 +57,8 @@ dropRoot(*config.user)
 # start proxies
 
 for each in config.listProxies():
-    proxyManager.start(config.getProxyConfig(each))
+    proxies.start(config.getProxyConfig(each))
 
 ##############################################################################
 
-while True:
-    try:
-        proxyManager.process()
-    except Exception,e:
-        exception(e)
+proxies.loop()

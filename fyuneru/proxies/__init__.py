@@ -15,11 +15,9 @@ the user doesn't have to maintain them on their own.
 import os
 import sys
 import random # replace with secure randomness
-from logging import log, debug, error
-from multiprocessing import Process
-
-from ..util.queuecenter import QueueCenter
-
+from logging import log, debug, error, exception
+from select import select
+from multiprocessing import Process, Pipe
 
 #from __shadowsocks import start as startCommandShadowsocks
 from __xmpp        import start as startCommandXMPP
@@ -29,17 +27,79 @@ proxyCommands = {\
     "xmpp": startCommandXMPP,
 }
 
+##############################################################################
+
+"""
+Provides several tools for connecting core process and proxy process using
+queues in multiprocessing module.
+"""
+
+class PipeDistributor:
+    """
+                                                  __________
+       Virtual Network Interface                 (          )
+     __   (/dev/tun device)                     (  INTERNET  )
+      |______________                            (__________)
+      |  ..       o  |                                ^
+      |     ...  o   |                               / \
+      |_|||||||_||||_|                              /_ _\ Proxy Traffic
+                                                     | |  (up and down)
+           |  /|\                                    | |
+           |   |                            +--------+-+-----------------+
+           |   |          +--------->-------| PROXY 01         pipe.recv |
+           |   |          |                 |                  pipe.send |>-+
+           |   |          |                 +----------------------------+  |
+           |   |          ^       ... +--->--------------------------------+|
+           |   |          |  |  |     |     +----------------------------+ ||
+           |   |        +----------------+  | PROXY 02         pipe.recv |<+|
+           |   |        | Random Routing |  |                  pipe.send |>+|
+          \|/  |        +----------------+  +----------------------------+ ||
+                                |                                          ||
+    +---------------------+     |                                          ||
+    | CORE  QC.send       |-->--+                                       ___||
+    |       QC.recv       |--<-----------------------------------------{----+
+    +---------------------+
+    """
+    
+    __subpipes = [] 
+
+    def __init__(self):
+        self.__publicConn, self.__privateConn = Pipe()
+
+    def __getattr__(self, name):
+        return getattr(self.__publicConn, name)
+
+    def newSubpipe(self):
+        connA, connB = Pipe()
+        self.__subpipes.append(connA)
+        return connB
+
+    def loop(self):
+        subpipesCount = len(self.__subpipes)
+        while True:
+            r, _, __ = select([self.__privateConn] + self.__subpipes, [], [])
+            for each in r:
+                # if received something from outside(i.e. local TUN device)    
+                if r == self.__privateConn:
+                    buf = self.__privateConn.recv()
+                    i = random.randrange(0, subpipesCount)
+                    sendPipe = self.__subpipes[i]
+                    sendPipe.send(buf)
+                    continue
+                # if received something from subpipe(i.e. proxy)
+                buf = each.recv()
+                self.__privateConn.send(buf)
 
 ##############################################################################
 
-class ProxyProcessException(Exception): pass
+class ProxyProcessesException(Exception): pass
 
-class ProxyProcessManager:
+class ProxyProcesses:
 
     __processes = {}
     
     def __init__(self, **args):
-        self.__queueCenter = QueueCenter()
+        self.__pipeDistributor = PipeDistributor()
 
     def start(self, proxyconf):
         """Start a process using a return value from
@@ -49,20 +109,20 @@ class ProxyProcessManager:
         if proxyType != 'xmpp': return # XXX TODO remove this line. debug only.
         
         if not proxyCommands.has_key(proxyType):
-            raise ProxyProcessException("Unsupported proxy type: %s" % \
+            raise ProxyProcessesException("Unsupported proxy type: %s" % \
                 proxyType
             )
         
         processName = proxyconf["name"]
         processMode = proxyconf["mode"]
         processFunc = proxyCommands[proxyType]
-        processQueuePair = self.__queueCenter.newProcessQueuePair()
+        processPipe = self.__pipeDistributor.newSubpipe()
         
         newProcess = Process(\
             target=processFunc, 
             args=(\
                 processMode, 
-                processQueuePair,
+                processPipe,
                 proxyconf["config"]
             )
         )
@@ -70,26 +130,8 @@ class ProxyProcessManager:
 
         self.__processes[processName] = newProcess
 
-    def __removeProcesses(self):
-        # remove processes that are ended
-        removeList = []
-        for each in self.__processes:
-            proc = self.__processes[each]
-            if not proc.is_alive():
-                removeList.append(each)
-        for each in removeList:
-            del self.__processes[each]
+    def __getattr__(self, name):
+        return getattr(self.__pipeDistributor, name)
 
-    def send(self, buf):
-        """Non-blocks sending a buffer to randomly one of the started
-        processes."""
-        self.__removeProcesses()
-        return self.__queueCenter.send(buf)
-
-    def recv(self):
-        """Non-blocks retrieving a buffer returned from one of the started
-        processes."""
-        return self.__queueCenter.recv() 
-
-    def process(self):
-        self.__queueCenter.process()
+    def loop(self):
+        self.__pipeDistributor.loop()
