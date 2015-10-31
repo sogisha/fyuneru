@@ -9,7 +9,7 @@ import time
 import logging
 from logging import info, debug, warning, error
 
-from fyuneru.net.intsck import InternalSocketClient, UDPCONNECTOR_WORD
+from fyuneru.net.intsck import InternalSocketClient
 from fyuneru.util.droproot import dropRoot
 from fyuneru.util.procmgr import ProcessManager, ParentProcessWatcher
 
