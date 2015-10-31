@@ -118,19 +118,27 @@ class QueueCenter:
                     # do not try to receive more queues
                     return
         
-        if len(possibleSender) < 1: return
+        if len(possibleSender) < 1:
+            debug("QueueCenter: Looping but found no possible sender.")
+            return
 
         senderCount = len(possibleSender)
         while True:
             try:
                 got = self.__sendQueue.get_nowait()
-            except:
+            except Empty:
+                break
+            except Exception,e:
+                exception(e)
                 break
             sender = possibleSender[random.randrange(0, senderCount)]
             core2proc, _ = self.__queuePairs[sender]["pair"]
             try:
                 core2proc.put(got)
-            except:
+            except Full:
+                continue
+            except Exception,e:
+                exception(e)
                 continue
 
     def send(self, obj):
