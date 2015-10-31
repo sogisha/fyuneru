@@ -46,6 +46,7 @@ def __vNetProcess(rsfuncs, config):
     funcSend, funcRecv = rsfuncs
 
     tun = VirtualNetworkInterface(config)
+    tun.up()
     droproot.dropRoot(*config["user"])
 
     crypt = crypto.Crypto(config["key"])
