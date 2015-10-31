@@ -80,7 +80,7 @@ class PipeDistributor:
             r, _, __ = select([self.__privateConn] + self.__subpipes, [], [])
             for each in r:
                 # if received something from outside(i.e. local TUN device)    
-                if r == self.__privateConn:
+                if each == self.__privateConn:
                     buf = self.__privateConn.recv()
                     i = random.randrange(0, subpipesCount)
                     sendPipe = self.__subpipes[i]
