@@ -57,10 +57,8 @@ def __vNetProcess(proxyIO, config):
                 buf = tun.read()
                 proxyIO.send(encrypt(buf))
                 debug("SEND: \n%s\n" % debugging.showPacket(buf))
-                continue
             if each == proxyIO:
                 buf = proxyIO.recv()
-                if not buf: continue
                 buf = decrypt(buf)
                 if not buf: continue
                 tun.write(buf)

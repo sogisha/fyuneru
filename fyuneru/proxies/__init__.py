@@ -76,19 +76,22 @@ class PipeDistributor:
 
     def loop(self):
         subpipesCount = len(self.__subpipes)
+        selects = [self.__privateConn] + self.__subpipes
         while True:
-            r, _, __ = select([self.__privateConn] + self.__subpipes, [], [])
+            r, _, __ = select(selects, [], [])
             for each in r:
-                # if received something from outside(i.e. local TUN device)    
                 if each == self.__privateConn:
-                    buf = self.__privateConn.recv()
+                    # if received something from outside(i.e. local TUN device)    
+                    buf = each.recv()
                     i = random.randrange(0, subpipesCount)
                     sendPipe = self.__subpipes[i]
                     sendPipe.send(buf)
-                    continue
-                # if received something from subpipe(i.e. proxy)
-                buf = each.recv()
-                self.__privateConn.send(buf)
+                    debug("PipeDistributor: Core -->>>>-- Proxies")
+                else:
+                    # if received something from subpipe(i.e. proxy)
+                    buf = each.recv()
+                    self.__privateConn.send(buf)
+                    debug("PipeDistributor: Core --<<<<-- Proxies")
 
 ##############################################################################
 
