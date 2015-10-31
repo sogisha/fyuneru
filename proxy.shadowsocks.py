@@ -11,7 +11,7 @@ from logging import info, debug, warning, error
 
 from fyuneru.net.intsck import InternalSocketClient, UDPCONNECTOR_WORD
 from fyuneru.util.droproot import dropRoot
-from fyuneru.util.procmgr import ProcessManager
+from fyuneru.util.procmgr import ProcessManager, ParentProcessWatcher
 
 ENCRYPTION_METHOD = 'aes-256-cfb'
 
@@ -20,6 +20,9 @@ ENCRYPTION_METHOD = 'aes-256-cfb'
 # ----------- parse arguments
 
 parser = argparse.ArgumentParser()
+
+# parent pid
+parser.add_argument("--parent-pid", type=int, required=True)
 
 # drop privilege to ...
 parser.add_argument("--uidname", metavar="UID_NAME", type=str, required=True)
@@ -129,10 +132,15 @@ def doExit(signum, frame):
     exit()
 signal.signal(signal.SIGTERM, doExit)
 
+# start parent process watcher
+
+parentProc = ParentProcessWatcher(args.parent_pid, doExit)
+
 ##############################################################################
 
 while True:
     try:
+        parentProc.watch()
         localSocket.heartbeat()
 
         selected = select([localSocket, proxySocket], [], [], 1.0)

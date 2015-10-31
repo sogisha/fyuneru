@@ -15,6 +15,7 @@ def proxyCommand(self, mode):
     proxyCommand = [
         'python',
         os.path.join(self.basepath, 'proxy.shadowsocks.py'),
+        '--parent-pid', str(self.pid),
         '--uidname', self.user[0],
         '--gidname', self.user[1],
         '--socket', self.proxyName, # proxy name used for socket channel

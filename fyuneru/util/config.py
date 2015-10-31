@@ -9,6 +9,7 @@ initializing the proxy subprocesses(more details defined in module
 `proxyconf`).
 """
 
+import os
 from distutils.version import StrictVersion
 from json import loads
 
@@ -90,6 +91,7 @@ class Configuration:
             role = 'client'
         coreCommand = [\
             'python', 'tunnel.py',
+            '--parent-pid', str(os.getpid()),
             '--uidname', user[0],
             '--gidname', user[1],
             '--role', role, 

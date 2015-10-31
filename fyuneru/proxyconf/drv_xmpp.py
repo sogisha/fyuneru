@@ -7,6 +7,7 @@ def proxyCommand(self, mode):
         '--socket', self.proxyName, # proxy name used for socket channel
         '--uidname', self.user[0],
         '--gidname', self.user[1],
+        '--parent-pid', str(self.pid),
     ]
 
     if mode == 's':

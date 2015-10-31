@@ -6,9 +6,7 @@ import time
 from logging import debug, info, warning, error
 
 
-class ProcessManagerException(Exception):
-    pass
-
+class ProcessManagerException(Exception): pass
 
 class ProcessManager:
 
@@ -75,3 +73,28 @@ class ProcessManager:
 
     def wait(self, name):
         self.__processes[name].wait()
+
+
+class ParentProcessWatcher:
+    __last = 0
+    def __init__(self, pid, terminator):
+        self.__pid = pid
+        self.__func = terminator
+        self.__last = time.time()
+
+    def watch(self):
+        now = time.time()
+        if now - self.__last < 10: return
+        proclist = subprocess.check_output(['ps', '-e']).split('\n')
+        strpid = str(self.__pid)
+        found = False
+        for each in proclist:
+            if each.strip().startswith(strpid):
+                found = True
+                return
+        info("Watching: %d" % self.__last)
+        if found:
+            self.__last = now
+        else:
+            warning("Parent pid [%d] not present anymore." % self.__pid)
+            self.__func(None, None)

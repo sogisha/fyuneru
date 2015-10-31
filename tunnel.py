@@ -13,6 +13,7 @@ from fyuneru.util.debug import showPacket
 from fyuneru.util.droproot import dropRoot
 from fyuneru.net.protocol import DataPacket, DataPacketException
 from fyuneru.net.intsck import InternalSocketServer
+from fyuneru.util.procmgr import ParentProcessWatcher
 
 ##############################################################################
 
@@ -32,6 +33,11 @@ parser.add_argument(\
     "--gidname",
     metavar="GID_NAME",
     type=str,
+    required=True
+)
+parser.add_argument(\
+    "--parent-pid",
+    type=int,
     required=True
 )
 parser.add_argument(\
@@ -126,8 +132,13 @@ def doExit(signum, frame):
     exit()
 signal.signal(signal.SIGTERM, doExit)
 
+parentProc = ParentProcessWatcher(args.parent_pid, doExit)
+
+
+
 while True:
     try:
+        parentProc.watch()
         
         # ---------- deal with I/O things
         

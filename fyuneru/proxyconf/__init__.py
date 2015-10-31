@@ -35,6 +35,7 @@ class ProxyConfigException(Exception):
 class ProxyConfig:
     
     def __init__(self, **args):
+        self.pid = os.getpid()
         self.user = args["user"]
         self.basepath = os.path.realpath(os.path.dirname(sys.argv[0]))
         self.baseKey = args["key"]
