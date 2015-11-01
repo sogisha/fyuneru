@@ -18,8 +18,9 @@
 [ DONE ] 2. 修改代理接口的协议，也许使用Unix Socket，改进握手的协议，将接口的
             性能统计（通过DataPacket的时刻）也加入。
 
-[ DONE ] 2.1 v1.1-using-unix-socket 分支，使用Unix Socket作为代理进程和主进程
+[  xx  ] 2.1 v1.1-using-unix-socket 分支，使用Unix Socket作为代理进程和主进程
              之间的通信方式。需要一种统一的IPC模块来完成任务。
+             (由于UnixSocket的特性，准备放弃此特性，重写由UDP连接的IPC）
 
 [ DONE ] 3. 为Shadowsocks代理增加在服务器重启后也能自动恢复连接的机制（Bugfix）
 
