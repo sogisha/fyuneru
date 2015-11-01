@@ -1,5 +1,27 @@
 import socket
 from struct import * 
+import logging
+import sys
+import os
+
+##############################################################################
+
+def configLoggingModule(debug):
+    logLevel = logging.INFO
+    if debug: logLevel = logging.DEBUG
+
+    procname = os.path.basename(sys.argv[0])
+    logFormat = \
+        "\n=== [%%(asctime)-15s] [%s]: %%(levelname)s\n %%(message)s"\
+        % procname 
+    
+
+    logging.basicConfig(\
+        level=logLevel,
+        format=logFormat
+    )
+
+##############################################################################
 
 def colorify(text, color):
     colors = {\
@@ -11,6 +33,8 @@ def colorify(text, color):
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
     return colors[color] + text + ENDC
+
+##############################################################################
 
 def _decodeIPFrame(buf):
     ip_header = buf[0:20]
@@ -38,7 +62,6 @@ def _decodeIPFrame(buf):
         "dst": str(d_addr),
     }
     return ip_meta, payload
-
 
 def showPacket(buf):
     width = 16
@@ -79,6 +102,8 @@ def showPacket(buf):
         pass
 
     return ret.strip() 
+
+##############################################################################
 
 if __name__ == '__main__':
     import os

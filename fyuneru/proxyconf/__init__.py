@@ -43,12 +43,12 @@ class ProxyConfig:
         self.proxyName = args["name"]
         self.proxyConfig = args["config"]
 
-    def getInitCommand(self, mode):
+    def getInitCommand(self, mode, debug=False):
         if not mode in ['s', 'c']:
             raise ProxyConfigException("Mode should be either 'c' or 's'.")
 
         if proxyCommands.has_key(self.proxyType):
-            return proxyCommands[self.proxyType](self, mode)
+            return proxyCommands[self.proxyType](self, mode, debug)
 
         raise ProxyConfigException("Unsupported proxy type: %s" % \
             self.proxyType

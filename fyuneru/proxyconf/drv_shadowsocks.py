@@ -3,7 +3,7 @@ import hmac
 import os
 
 
-def proxyCommand(self, mode):
+def proxyCommand(self, mode, debug=False):
     sharedsecret= hmac.HMAC(\
         str(self.proxyName + '-shadowsocks'),
         self.baseKey,
@@ -20,6 +20,7 @@ def proxyCommand(self, mode):
         '--gidname', self.user[1],
         '-k', sharedsecret,
     ]
+    if debug: proxyCommand += ['--debug']
 
     if mode == 's':
         proxyCommand += [

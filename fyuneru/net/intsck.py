@@ -11,7 +11,7 @@ underlays, traffic statistics, etc.
 
 import os
 import sys
-from logging import debug, info, warning, error
+from logging import debug, info, warning, error, exception
 from time import time
 from struct import pack, unpack
 from socket import socket, AF_INET, SOCK_DGRAM
@@ -119,27 +119,33 @@ class InternalSocketClient:
         return getattr(self.__sock, name)
 
     def close(self):
-        debug("Internal socket shutting down...")
+        debug("IPC socket shutting down...")
         try:
             self.__sock.close()
         except Exception,e:
             error("Error closing socket: %s" % e)
 
     def heartbeat(self):
-        if not self.connected or time() - self.__lastbeat > 5:
+        tdiff = time() - self.__lastbeat
+        if not self.connected or tdiff > 2:
             try:
                 self.__lastbeat = time()
                 self.__sock.sendto(UDPCONNECTOR_WORD, self.__peer)
+                if not self.connected: debug("IPC heartbeat sent to server.")
             except Exception,e:
+                exception(e)
+                error("Heartbeat of IPC connection at client failed.")
                 self.connected = False
-                print e
+        if self.connected and tdiff > 5:
+            warning("Stale IPC connection at client detected.")
+            self.connected = False
 
     def receive(self):
         buf, sender = self.__sock.recvfrom(65536)
         if sender != self.__peer: return None
         if buf.strip() == UDPCONNECTOR_WORD:
             # connection word received, answer
-            debug("IPC client connected.")
+            if self.connected == False: debug("IPC client connected.")
             self.connected = True
             return None
         return buf 
@@ -150,5 +156,6 @@ class InternalSocketClient:
             # reply using last recorded peer
             self.__sock.sendto(buf, self.__peer)
         except Exception,e:
-            print e # for debug
+            exception(e)
+            error("Failed sending buffer to IPC server.")
             self.connected = False # this peer may not work

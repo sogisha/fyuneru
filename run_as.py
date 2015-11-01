@@ -57,7 +57,7 @@ coreCommand = config.getCoreCommand(\
 proxyCommands = {} 
 for proxyName in config.listProxies():
     proxyCommands[proxyName] = \
-        config.getProxyConfig(proxyName).getInitCommand(MODE)
+        config.getProxyConfig(proxyName).getInitCommand(MODE, bool(args.debug))
 
 ##############################################################################
 

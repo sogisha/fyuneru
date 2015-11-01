@@ -15,17 +15,22 @@ and install manually.
 import argparse
 import signal
 from select import select
-from logging import debug
+import logging
+from logging import info, warning, debug, exception, error
 
 import xmpp
 
 from fyuneru.net.intsck import InternalSocketClient
 from fyuneru.util.droproot import dropRoot
 from fyuneru.util.procmgr import ParentProcessWatcher
+from fyuneru.util.debug import configLoggingModule
 
 # ----------- parse arguments
 
 parser = argparse.ArgumentParser()
+
+# if enable debug mode
+parser.add_argument("--debug", action="store_true", default=False)
 
 # drop privilege to ...
 parser.add_argument("--uidname", metavar="UID_NAME", type=str, required=True)
@@ -38,6 +43,13 @@ parser.add_argument("--jid", type=str, required=True)
 parser.add_argument("--password", type=str, required=True)
 
 args = parser.parse_args()
+
+
+# ---------- config log/debug functions
+
+configLoggingModule(args.debug)
+
+# ---------- drop root
 
 dropRoot(args.uidname, args.gidname)
 

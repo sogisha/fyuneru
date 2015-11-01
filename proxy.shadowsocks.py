@@ -12,6 +12,7 @@ from logging import info, debug, warning, error
 from fyuneru.net.intsck import InternalSocketClient
 from fyuneru.util.droproot import dropRoot
 from fyuneru.util.procmgr import ProcessManager, ParentProcessWatcher
+from fyuneru.util.debug import configLoggingModule
 
 ENCRYPTION_METHOD = 'aes-256-cfb'
 
@@ -20,6 +21,9 @@ ENCRYPTION_METHOD = 'aes-256-cfb'
 # ----------- parse arguments
 
 parser = argparse.ArgumentParser()
+
+# if enable debug mode
+parser.add_argument("--debug", action="store_true", default=False)
 
 # parent pid
 parser.add_argument("--parent-pid", type=int, required=True)
@@ -58,6 +62,10 @@ parser.add_argument(\
         this one.""")
 
 args = parser.parse_args()
+
+##############################################################################
+
+configLoggingModule(args.debug)
 
 ##############################################################################
 

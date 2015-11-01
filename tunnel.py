@@ -9,7 +9,7 @@ from logging import info, debug, warning, error, critical
 
 from fyuneru.net.vnet import VirtualNetworkInterface
 from fyuneru.util.crypto import randint
-from fyuneru.util.debug import showPacket
+from fyuneru.util.debug import showPacket, configLoggingModule
 from fyuneru.util.droproot import dropRoot
 from fyuneru.net.protocol import DataPacket, DataPacketException
 from fyuneru.net.intsck import InternalSocketServer
@@ -84,10 +84,7 @@ UNIX_SOCKET_NAMES = args.SOCKET_NAME
 
 # ---------- config log/debug functions
 
-if args.debug:
-    logging.basicConfig(level=logging.DEBUG)
-else:
-    logging.basicConfig(level=logging.INFO)
+configLoggingModule(args.debug)
 
 # ---------- config TUN device
 
