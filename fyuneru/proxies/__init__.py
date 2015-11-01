@@ -77,7 +77,7 @@ class PipeDistributor:
         selects = [io] + self.__subpipes
         while True:
             try:
-                r, _, __ = select(selects, [], [], 0)
+                r, _, __ = select(selects, [], [])
                 for each in r:
                     if each == io:
                         # if received something from outside(i.e. local TUN device)    
