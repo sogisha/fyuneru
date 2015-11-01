@@ -22,7 +22,6 @@ import xmpp
 
 from fyuneru.net.intsck import InternalSocketClient
 from fyuneru.util.droproot import dropRoot
-from fyuneru.util.procmgr import ParentProcessWatcher
 from fyuneru.util.debug import configLoggingModule
 
 # ----------- parse arguments
@@ -35,8 +34,6 @@ parser.add_argument("--debug", action="store_true", default=False)
 # drop privilege to ...
 parser.add_argument("--uidname", metavar="UID_NAME", type=str, required=True)
 parser.add_argument("--gidname", metavar="GID_NAME", type=str, required=True)
-# watch this pid. If left unspecified, do not watch.
-parser.add_argument("--parent-pid", type=int, required=True)
 
 parser.add_argument("--peer", type=str, required=True)
 parser.add_argument("--jid", type=str, required=True)
@@ -125,8 +122,6 @@ def doExit(signum, frame):
     exit()
 signal.signal(signal.SIGTERM, doExit)
 
-parentProc = ParentProcessWatcher(args.parent_pid, doExit)
-
 ##############################################################################
 
 sockets = {
@@ -137,7 +132,6 @@ sockets = {
 while True:
     try:
         local.heartbeat()
-        parentProc.watch()
         r, w, _ = select(sockets.keys(), [], [], 1)
         for each in r:
             if sockets[each] == 'proxy':
@@ -153,6 +147,7 @@ while True:
                 debug("Received %d bytes, sending to tunnel." % len(recv))
                 proxy.send(recv)
 
+        if local.broken: doExit(None, None)
 
     except KeyboardInterrupt:
         doExit(None,None)

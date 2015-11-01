@@ -12,8 +12,8 @@ def configLoggingModule(debug):
 
     procname = os.path.basename(sys.argv[0])
     logFormat = \
-        "\n=== [%%(asctime)-15s] [%s]: %%(levelname)s\n %%(message)s"\
-        % procname 
+        "\n=== [%%(asctime)-15s] [%s|%d]: %%(levelname)s\n %%(message)s"\
+        % (procname, os.getpid())
     
 
     logging.basicConfig(\

@@ -6,7 +6,6 @@ def proxyCommand(self, mode, debug=False):
         os.path.join(self.basepath, 'proxy.xmpp.py'),
         '--uidname', self.user[0],
         '--gidname', self.user[1],
-        '--parent-pid', str(self.pid),
     ]
     if debug: proxyCommand += ['--debug']
 

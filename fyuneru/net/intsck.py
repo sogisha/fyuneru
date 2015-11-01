@@ -110,13 +110,24 @@ class InternalSocketClient:
     __peer = ("127.0.0.1", IPCPort) 
     
     connected = False
-    __lastbeat = 0
+    broken = False
+
+    __lastbeatSent = 0
+    __lastbeatRecv = 0
 
     def __init__(self):
         self.__sock = socket(AF_INET, SOCK_DGRAM)
 
     def __getattr__(self, name):
         return getattr(self.__sock, name)
+
+    def __registerLastBeatSent(self):
+        self.__lastbeatSent = time()
+
+    def __registerLastBeatRecv(self):
+        self.__lastbeatRecv = time()
+        self.connected = True
+        self.broken = False
 
     def close(self):
         debug("IPC socket shutting down...")
@@ -126,19 +137,22 @@ class InternalSocketClient:
             error("Error closing socket: %s" % e)
 
     def heartbeat(self):
-        tdiff = time() - self.__lastbeat
-        if not self.connected or tdiff > 2:
+        tdiffSent = time() - self.__lastbeatSent
+        tdiffRecv = time() - self.__lastbeatRecv
+        if not self.connected or tdiffSent > 2:
             try:
-                self.__lastbeat = time()
+                self.__registerLastBeatSent()
                 self.__sock.sendto(UDPCONNECTOR_WORD, self.__peer)
                 if not self.connected: debug("IPC heartbeat sent to server.")
             except Exception,e:
                 exception(e)
                 error("Heartbeat of IPC connection at client failed.")
                 self.connected = False
-        if self.connected and tdiff > 5:
+                self.broken = True
+        if self.connected and tdiffRecv > 5:
             warning("Stale IPC connection at client detected.")
             self.connected = False
+            self.broken = True
 
     def receive(self):
         buf, sender = self.__sock.recvfrom(65536)
@@ -146,7 +160,7 @@ class InternalSocketClient:
         if buf.strip() == UDPCONNECTOR_WORD:
             # connection word received, answer
             if self.connected == False: debug("IPC client connected.")
-            self.connected = True
+            self.__registerLastBeatRecv()
             return None
         return buf 
 
@@ -159,3 +173,4 @@ class InternalSocketClient:
             exception(e)
             error("Failed sending buffer to IPC server.")
             self.connected = False # this peer may not work
+            self.broken = True
