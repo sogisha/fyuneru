@@ -11,43 +11,40 @@ underlays, traffic statistics, etc.
 
 import os
 import sys
-import hashlib
 from logging import debug, info, warning, error
 from time import time
 from struct import pack, unpack
-from socket import socket, AF_UNIX, SOCK_DGRAM
+from socket import socket, AF_INET, SOCK_DGRAM
+import random
 from ..util.crypto import Crypto
 
 UDPCONNECTOR_WORD = \
     "Across the Great Wall, we can reach every corner in the world."
 
-##############################################################################
+IPCPort = 64089
 
-def getUNIXSocketPathByName(socketName, role):
-    socketid = hashlib.sha1(role + "|" + socketName).hexdigest()
-    socketFile = '.fyuneru-intsck-%s' % socketid
-    return os.path.join('/', 'tmp', socketFile) 
-    
+##############################################################################
 
 class InternalSocketServer:
 
     __sockpath = None
     __sock = None
 
-    peer = None
+    peers = {}
 
     sendtiming = 0
     recvtiming = 0
 
-    def __init__(self, name, key):
+    def __init__(self, key):
         self.__crypto = Crypto(key)
-        self.__sock = socket(AF_UNIX, SOCK_DGRAM)
-        self.__sockpath = getUNIXSocketPathByName(name, "server")
-        if os.path.exists(self.__sockpath): os.remove(self.__sockpath)
-        self.__sock.bind(self.__sockpath)
+        self.__sock = socket(AF_INET, SOCK_DGRAM)
+        self.__sock.bind(("127.0.0.1", IPCPort))
 
     def __getattr__(self, name):
         return getattr(self.__sock, name)
+
+    def __registerPeer(self, addrTuple):
+        self.peers[addrTuple] = True
 
     def close(self):
         # close socket
@@ -56,29 +53,18 @@ class InternalSocketServer:
             self.__sock.close()
         except Exception,e:
             error("Error closing socket: %s" % e)
-        # remove socket file
-        try:
-            os.remove(self.__sockpath)
-        except Exception,e:
-            error("Error removing UNIX socket: %s" % e)
+
+    def clean(self):
+        # reserved for doing clean up jobs relating to the peer delays
+        pass
 
     def receive(self):
         buf, sender = self.__sock.recvfrom(65536)
 
-        if type(sender) != str:
-            # We communicate on UNIX sockets, if sender doesn't make its own
-            # statement(by using bind) of its socket address, we cannot reply.
-            # Therefore we'll discard such packets.
-            return None
-
         if buf.strip() == UDPCONNECTOR_WORD:
             # connection word received, answer
-            self.peer = sender
+            self.__registerPeer(sender)
             self.__sock.sendto(UDPCONNECTOR_WORD, sender)
-            return None
-
-        if self.peer != sender:
-            # Sender has not made a handshake before
             return None
 
         decryption = self.__crypto.decrypt(buf)
@@ -90,38 +76,37 @@ class InternalSocketServer:
         buf = decryption[8:]
 
         self.recvtiming = max(self.recvtiming, timestamp)
+        self.__registerPeer(sender)
         return buf 
 
     def send(self, buf):
-        if None == self.peer:
-            return
+        # choose a peer randomly
+        possiblePeers = [i for i in self.peers if self.peers[i]]
+        if len(possiblePeers) < 1: return
+        peer = possiblePeers[random.randrange(0, len(possiblePeers))]
+        # send to this peer
         self.sendtiming = time()
         header = pack('<d', self.sendtiming)
         encryption = self.__crypto.encrypt(header + buf)
         try:
             # reply using last recorded peer
-            self.__sock.sendto(encryption, self.peer)
+            self.__sock.sendto(encryption, peer)
         except Exception,e:
             error(e) # for debug
-            self.peer = None # this peer may not work
+            self.peers[peer] = False # this peer may not work
 
 
 class InternalSocketClient:
 
-    __sockpath = None
     __sock = None
-    __peer = None
+    __peer = ("127.0.0.1", IPCPort) 
     
     connected = False
     __lastbeat = 0
 
     def __init__(self, name):
         self.__name = name
-        self.__sock = socket(AF_UNIX, SOCK_DGRAM)
-        self.__sockpath = getUNIXSocketPathByName(name, "client")
-        self.__peer = getUNIXSocketPathByName(name, "server")
-        if os.path.exists(self.__sockpath): os.remove(self.__sockpath)
-        self.__sock.bind(self.__sockpath)
+        self.__sock = socket(AF_INET, SOCK_DGRAM)
 
     def __getattr__(self, name):
         return getattr(self.__sock, name)
@@ -132,15 +117,8 @@ class InternalSocketClient:
             self.__sock.close()
         except Exception,e:
             error("Error closing socket: %s" % e)
-        try:
-            os.remove(self.__sockpath)
-        except Exception,e:
-            error("Error removing UNIX socket: %s" % e)
 
     def heartbeat(self):
-        if not os.path.exists(self.__peer):
-            self.connected = False
-            return
         if not self.connected or time() - self.__lastbeat > 5:
             try:
                 self.__lastbeat = time()

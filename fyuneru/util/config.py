@@ -14,7 +14,6 @@ from distutils.version import StrictVersion
 from json import loads
 
 from ..proxyconf import ProxyConfig
-from ..net.intsck import getUNIXSocketPathByName 
 
 VERSION_REQUIREMENT = "1.1" # required version of `config.json`
 

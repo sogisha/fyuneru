@@ -108,19 +108,18 @@ info(\
 tun.up()
 info("%s: up now." % tun.name)
 
+# ---------- create IPC server
+
+ipc = InternalSocketServer(args.key)
+
 # ---------- drop root privileges
 
 uidname, gidname = args.uidname, args.gidname
 dropRoot(uidname, gidname)
 
-# ---------- open UDP sockets
+# ---------- loop
 
-reads = [tun] # for `select` function
-for socketName in UNIX_SOCKET_NAMES:
-    newSocket = InternalSocketServer(socketName, args.key)
-    reads.append(newSocket)
-
-info("Opening unix socket %s" % ", ".join(UNIX_SOCKET_NAMES))
+reads = [ipc, tun] # for `select` function
 
 ##############################################################################
 
@@ -147,24 +146,13 @@ while True:
             if each == tun:
                 # ---------- forward packets came from tun0
                 buf = each.read(65536) # each.read(each.mtu)
-                # write to socket who have got a peer
-                possible = [x for x in xrange(1, len(reads)) if reads[x].peer]
-                if len(possible) == 0:
-                    continue # drop the packet
-                i = possible[randint(0, len(possible) - 1)]
-                workerSocket = reads[i]
                 # pack buf with timestamp
                 packet = DataPacket()
                 packet.data = buf
                 # encrypt and sign buf
-                workerSocket.send(str(packet))
-                debug("[%f] %s --> [%d]\n%s\n" % (\
-                    workerSocket.sendtiming,
-                    tun.name,
-                    i,
-                    showPacket(buf)
-                ))
-            else:
+                ipc.send(str(packet))
+                debug(showPacket(buf))
+            if each == ipc:
                 # ---------- receive packets from internet
                 buf = each.receive()
                 if buf == None:
@@ -182,20 +170,11 @@ while True:
                 
                 # send buf to network interface
                 tun.write(packet.data)
-                debug("[%f]: --> %s\n%s\n" % (\
-                    each.recvtiming,
-                    tun.name,
-                    showPacket(packet.data)
-                ))
+                debug(showPacket(packet.data))
 
         # ---------- deal with tunnel delay timings
 
-        for i in xrange(1, len(reads)): # omit i==0 for TUN. XXX bad code!
-            theSocket = reads[i]
-            sent, recv = theSocket.sendtiming, theSocket.recvtiming
-            # we may decide a proxy is stale and restart. however we are
-            # not in the process controlling proxy processes... TODO 
-            pass
+        ipc.clean()
 
 
     except KeyboardInterrupt:
