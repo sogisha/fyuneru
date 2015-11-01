@@ -4,7 +4,6 @@ def proxyCommand(self, mode):
     proxyCommand = [
         'python',
         os.path.join(self.basepath, 'proxy.xmpp.py'),
-        '--socket', self.proxyName, # proxy name used for socket channel
         '--uidname', self.user[0],
         '--gidname', self.user[1],
         '--parent-pid', str(self.pid),

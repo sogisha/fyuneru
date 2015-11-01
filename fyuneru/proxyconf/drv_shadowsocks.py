@@ -18,7 +18,6 @@ def proxyCommand(self, mode):
         '--parent-pid', str(self.pid),
         '--uidname', self.user[0],
         '--gidname', self.user[1],
-        '--socket', self.proxyName, # proxy name used for socket channel
         '-k', sharedsecret,
     ]
 

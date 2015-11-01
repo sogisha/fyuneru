@@ -36,13 +36,6 @@ parser.add_argument(\
     required=True
 )
 
-# socket name
-parser.add_argument(\
-    "--socket",
-    type=str,
-    required=True
-)
-
 # use the binary executable specified
 parser.add_argument("--bin", type=str, default="/usr/local/bin/ss-tunnel")
 # following -? arguments are for process `sslocal`
@@ -103,7 +96,7 @@ procmgr.new('shadowsocks', sscmd)
 
 ##############################################################################
 
-localSocket = InternalSocketClient(args.socket) 
+localSocket = InternalSocketClient() 
 proxySocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 if 'server' == args.mode:

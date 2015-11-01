@@ -30,8 +30,6 @@ parser = argparse.ArgumentParser()
 # drop privilege to ...
 parser.add_argument("--uidname", metavar="UID_NAME", type=str, required=True)
 parser.add_argument("--gidname", metavar="GID_NAME", type=str, required=True)
-# use socket to get connected
-parser.add_argument("--socket", type=str, required=True)
 # watch this pid. If left unspecified, do not watch.
 parser.add_argument("--parent-pid", type=int, required=True)
 
@@ -97,7 +95,7 @@ class SocketXMPPProxy:
 ##############################################################################
 
 proxy = SocketXMPPProxy(args.jid, args.password, args.peer)
-local = InternalSocketClient(args.socket)
+local = InternalSocketClient()
 
 ##############################################################################
 

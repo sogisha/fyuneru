@@ -44,7 +44,7 @@ class InternalSocketServer:
         return getattr(self.__sock, name)
 
     def __registerPeer(self, addrTuple):
-        self.peers[addrTuple] = True
+        self.peers[addrTuple] = time() 
 
     def close(self):
         # close socket
@@ -56,7 +56,15 @@ class InternalSocketServer:
 
     def clean(self):
         # reserved for doing clean up jobs relating to the peer delays
-        pass
+        removeList = []
+        now = time()
+        for each in self.peers:
+            if not self.peers[each]:
+                removeList.append(each)
+            elif now - self.peers[each] > 5:
+                removeList.append(each)
+        for each in removeList:
+            del self.peers[each]
 
     def receive(self):
         buf, sender = self.__sock.recvfrom(65536)
@@ -104,8 +112,7 @@ class InternalSocketClient:
     connected = False
     __lastbeat = 0
 
-    def __init__(self, name):
-        self.__name = name
+    def __init__(self):
         self.__sock = socket(AF_INET, SOCK_DGRAM)
 
     def __getattr__(self, name):
@@ -132,7 +139,7 @@ class InternalSocketClient:
         if sender != self.__peer: return None
         if buf.strip() == UDPCONNECTOR_WORD:
             # connection word received, answer
-            debug("CONNECTION: %s(IPCCli)" % self.__name)
+            debug("IPC client connected.")
             self.connected = True
             return None
         return buf 

@@ -141,7 +141,7 @@ while True:
         
         # ---------- deal with I/O things
         
-        readables = select(reads, [], [], 0.5)[0]
+        readables = select(reads, [], [], 5.0)[0]
         for each in readables:
             if each == tun:
                 # ---------- forward packets came from tun0
