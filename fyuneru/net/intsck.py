@@ -32,9 +32,6 @@ class InternalSocketServer:
 
     peers = {}
 
-    sendtiming = 0
-    recvtiming = 0
-
     def __init__(self, key):
         self.__crypto = Crypto(key)
         self.__sock = socket(AF_INET, SOCK_DGRAM)
@@ -43,8 +40,31 @@ class InternalSocketServer:
     def __getattr__(self, name):
         return getattr(self.__sock, name)
 
-    def __registerPeer(self, addrTuple):
-        self.peers[addrTuple] = time() 
+    def __registerPeer(self, addrTuple, timestamp=None):
+        """Register a peer's activity. This implies we have heard from this
+        peer. If timestamp is given, it will be used to update the last network
+        reception time."""
+        now = time()
+
+        if not self.peers.has_key(addrTuple):
+            self.peers[addrTuple] = {\
+                "recv": False,
+                "send": False,
+                "heartbeat": now,
+            }
+            return
+
+        if timestamp: self.peers[addrTuple]["recv"] = timestamp
+        self.peers[addrTuple]["heartbeat"] = now
+
+    def __choosePeer(self):
+        """Choose a peer randomly. This implies we are going to send a packet
+        to this peer, and thus the sending timing will be updated."""
+        possiblePeers = [i for i in self.peers if self.peers[i] != False]
+        if len(possiblePeers) < 1: return None
+        peer = possiblePeers[random.randrange(0, len(possiblePeers))]
+        self.peers[peer]["send"] = time()
+        return peer
 
     def close(self):
         # close socket
@@ -52,7 +72,8 @@ class InternalSocketServer:
         try:
             self.__sock.close()
         except Exception,e:
-            error("Error closing socket: %s" % e)
+            error("Error closing socket.")
+            exception(e)
 
     def clean(self):
         # reserved for doing clean up jobs relating to the peer delays
@@ -60,49 +81,72 @@ class InternalSocketServer:
         now = time()
         for each in self.peers:
             if not self.peers[each]:
+                # if peer has been marked as False, because of errors, etc
                 removeList.append(each)
-            elif now - self.peers[each] > 5:
+                continue
+            # if we have not heard from peer for some while, take it as stale
+            if now - self.peers[each]["heartbeat"] > 5:
                 removeList.append(each)
-        for each in removeList:
-            del self.peers[each]
+        if len(removeList) > 0:
+            for each in removeList:
+                # delete peers: forget them(no more tasks will be assigned)
+                self.peers[each] = False
+                del self.peers[each]
+            warning(\
+                "Following proxies are removed due to irresponsibility: \n" +
+                " \n".join(["%s:%d" % i for i in removeList])
+            )
 
     def receive(self):
         buf, sender = self.__sock.recvfrom(65536)
 
         if buf.strip() == UDPCONNECTOR_WORD:
-            # connection word received, answer
+            # If this is a greeting word, register this as a new connected peer
+            # and answer
             self.__registerPeer(sender)
             self.__sock.sendto(UDPCONNECTOR_WORD, sender)
             return None
 
+        # Otherwise, this is data packet and has to be decrypted correctly.
         decryption = self.__crypto.decrypt(buf)
         if not decryption: return None
 
+        # Decrypted data must be also good formated.
         if len(decryption) < 8: return None
         header = decryption[:8]
         timestamp = unpack('<d', header)[0]
+        if timestamp > time(): return None # don't fool me
         buf = decryption[8:]
 
-        self.recvtiming = max(self.recvtiming, timestamp)
-        self.__registerPeer(sender)
+        # Only then we will recognize this as a legal status update from this
+        # peer. Refresh the peer record with updated receiving timings.
+        self.__registerPeer(sender, timestamp)
+
         return buf 
 
     def send(self, buf):
-        # choose a peer randomly
-        possiblePeers = [i for i in self.peers if self.peers[i]]
-        if len(possiblePeers) < 1: return
-        peer = possiblePeers[random.randrange(0, len(possiblePeers))]
-        # send to this peer
-        self.sendtiming = time()
-        header = pack('<d', self.sendtiming)
+        # Choose a peer randomly
+        peer = self.__choosePeer()
+        if not peer: 
+            error("Not even one proxy found. Dropping a packet.")
+            return
+
+        # Prepare for the data that's going to be sent to this peer
+        header = pack('<d', time())
         encryption = self.__crypto.encrypt(header + buf)
+
+        # Send to this peer. If anything goes wrong, mark this peer as False
         try:
-            # reply using last recorded peer
             self.__sock.sendto(encryption, peer)
         except Exception,e:
-            error(e) # for debug
+            exception(e) # for debug
+            warning(\
+                ("Failed sending to proxy listening at %s:%d." % peer) +
+                "This proxy will be removed."
+            )
             self.peers[peer] = False # this peer may not work
 
+##############################################################################
 
 class InternalSocketClient:
 
