@@ -13,7 +13,7 @@ import time
 import logging
 from logging import info, debug, warning, error
 
-from fyuneru.net.intsck import InternalSocketClient
+from fyuneru.ipc.client import InternalSocketClient
 from fyuneru.util.droproot import dropRoot
 from fyuneru.util.debug import configLoggingModule
 

@@ -18,7 +18,7 @@ import argparse
 import signal
 from select import select
 
-from fyuneru.intsck import InternalSocketClient
+from fyuneru.ipc.client import InternalSocketClient
 from fyuneru.droproot import dropRoot
 
 def log(x):

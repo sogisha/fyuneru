@@ -20,7 +20,7 @@ from logging import info, warning, debug, exception, error
 
 import xmpp
 
-from fyuneru.net.intsck import InternalSocketClient
+from fyuneru.ipc.client import InternalSocketClient
 from fyuneru.util.droproot import dropRoot
 from fyuneru.util.debug import configLoggingModule
 

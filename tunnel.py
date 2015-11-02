@@ -12,7 +12,7 @@ from fyuneru.util.crypto import randint
 from fyuneru.util.debug import showPacket, configLoggingModule
 from fyuneru.util.droproot import dropRoot
 from fyuneru.net.protocol import DataPacket, DataPacketException
-from fyuneru.net.intsck import InternalSocketServer
+from fyuneru.ipc.server import InternalSocketServer
 from fyuneru.util.procmgr import ParentProcessWatcher
 
 ##############################################################################
