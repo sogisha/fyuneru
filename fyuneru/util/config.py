@@ -17,6 +17,11 @@ from ..proxyconf import ProxyConfig
 
 VERSION_REQUIREMENT = "1.1" # required version of `config.json`
 
+proxies = {
+    "shadowsocks": "proxy.shadowsocks.py",
+    "xmpp": "proxy.xmpp.py",
+}
+
 ##############################################################################
 
 class CoreConfiguration: pass
@@ -81,8 +86,16 @@ class Configuration:
             key=self.key
         )
 
-    def getProxyInitParameters(self):
-        pass
+    def getProxyInitParameters(self, proxyName, IPCServer):
+        proxyConfig = self.__proxies[name]
+        proxyType = proxyConfig["type"]
+        return [\
+            "python",
+            proxies[proxyType],
+            IPCServer.local[0], # IPC Server Host
+            IPCServer.local[1], # IPC Server Port
+            IPCServer.IPCKey,   # IPC Internal Communication AuthKey
+        ]
 
     def getCoreInitParameters(self, mode):
         ret = CoreConfiguration()

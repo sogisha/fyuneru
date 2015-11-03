@@ -139,8 +139,7 @@ info("%s: up now." % tun.name)
 # ---------- initialize proxy processes
 
 for proxyName in config.listProxies():
-    proxyCommands[proxyName] = \
-        config.getProxyConfig(proxyName).getInitCommand(MODE, bool(args.debug))
+    proxyCommand = config.getProxyInitParameters(proxyName, ipc)
     processes.new(proxyName, proxyCommand)
 
 # ---------- drop root privileges

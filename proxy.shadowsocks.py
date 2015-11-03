@@ -13,6 +13,7 @@ from fyuneru.ipc.client import InternalSocketClient
 from fyuneru.util.droproot import dropRoot
 from fyuneru.util.procmgr import ProcessManager
 from fyuneru.util.debug import configLoggingModule
+from fyuneru.ipc.url import IPCServerURL
 
 ENCRYPTION_METHOD = 'aes-256-cfb'
 
@@ -22,6 +23,9 @@ ENCRYPTION_METHOD = 'aes-256-cfb'
 
 parser = argparse.ArgumentParser()
 
+parser.add_argument("IPC_SERVER_URL", type=str)
+
+"""
 # if enable debug mode
 parser.add_argument("--debug", action="store_true", default=False)
 
@@ -43,22 +47,44 @@ parser.add_argument("--bin", type=str, default="/usr/local/bin/ss-tunnel")
 parser.add_argument("-k", type=str, help="Encryption key.")
 parser.add_argument(\
     "-s",
-    type=str,
-    help="""
-        Server address. Must be real address when running in SERVER mode, can
-        be an address of another tunnel's entry when running in CLIENT mode.
-    """)
+    type=str
+)
 parser.add_argument("-p", type=int, help="Server port.")
 parser.add_argument("-l", type=int, help="Local UDP tunnel entry port.")
 # UDP Ports regarding the core process
 parser.add_argument(\
     "FORWARD_TO",
-    type=int,
-    help="""
-        UDP tunnel exit port on server. Client's port will be forwarded to
-        this one.""")
+    type=int
+)
+"""
 
 args = parser.parse_args()
+
+##############################################################################
+
+# use command line to initialize IPC client
+
+ipc = InternalSocketClient(args.IPC_SERVER_URL)
+
+queried = False
+
+def queryFiller(packet):
+    global args
+    packet.question = 'init'
+    packet.arguments = {"name": args.NAME}
+
+def infoReader(packet):
+    global queried
+    print packet
+    exit()
+
+
+while True:
+    r = select([ipc], [], [], 2.0)[0]
+    if len(r) < 1: continue
+    ipc.onInfo(infoReader)
+    ipc.doQuery(queryFiller)
+    if queried: break
 
 ##############################################################################
 

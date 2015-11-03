@@ -27,7 +27,9 @@ class InternalSocketServer:
 
     __sockpath = None
     __sock = None
-
+    
+    local = None
+    IPCKey = None
     peers = {}
 
     __answerFunctions = {} # for IPC query/info service
@@ -37,9 +39,10 @@ class InternalSocketServer:
 
         self.__crypto = Crypto(key)
         self.__authenticator = Authenticator(self.IPCKey)
+        self.local = ("127.0.0.1", IPCPort)
         
         self.__sock = socket(AF_INET, SOCK_DGRAM)
-        self.__sock.bind(("127.0.0.1", IPCPort))
+        self.__sock.bind(self.local)
 
     def __getattr__(self, name):
         return getattr(self.__sock, name)
@@ -89,6 +92,9 @@ class InternalSocketServer:
         # If not, call different handlers to handle this.
         if isinstance(packet, HeartbeatPacket):
             self.__handleHeartbeatPacket(packet, sender)
+            return None
+        if isinstance(packet, QueryPacket):
+            self.__handleQueryPacket(packet, sender)
             return None
 
     # ---------- inner handlers for different packets

@@ -16,16 +16,16 @@ from struct import pack, unpack
 from socket import socket, AF_INET, SOCK_DGRAM
 
 from fyuneru.util.crypto import Authenticator
-from __protocol import * 
-
-IPCPort = 64089
+from __protocol import *
+from .url import IPCServerURL
 
 ##############################################################################
 
 class InternalSocketClient:
 
     __sock = None
-    __peer = ("127.0.0.1", IPCPort) 
+    __name = None
+    __peer = (None, None) 
     
     connected = False
     broken = False
@@ -33,9 +33,15 @@ class InternalSocketClient:
     __lastbeatSent = 0
     __lastbeatRecv = 0
 
-    def __init__(self, ipckey):
+    __infoHandler = None
+
+    def __init__(self, serverURL):
+        server = IPCServerURL(serverURL)
+
         self.__sock = socket(AF_INET, SOCK_DGRAM)
-        self.__authenticator = Authenticator(ipckey)
+        self.__authenticator = Authenticator(server.key)
+        self.__peer = (server.host, server.port)
+        self.__name = server.user
 
     def __getattr__(self, name):
         return getattr(self.__sock, name)
@@ -74,6 +80,9 @@ class InternalSocketClient:
         if isinstance(packet, HeartbeatPacket):
             self.__handleHeartbeatPacket(packet)
             return None
+        if isinstance(packet, InfoPacket):
+            self.__handleInfoPacket(packet)
+            return None
 
     # ---------- inner handlers for different packets
 
@@ -82,7 +91,18 @@ class InternalSocketClient:
         if self.connected == False: debug("IPC client connected.")
         self.__registerLastBeatRecv()
 
+    def __handleInfoPacket(packet):
+        if self.__infoHandler: self.__infoHandler(packet)
+
     # ---------- public functions
+
+    def doQuery(self, fillerFunc):
+        packet = QueryPacket()
+        fillerFunc(packet)
+        self.__sendPacket(packet)
+
+    def onInfo(self, handler):
+        self.__infoHandler = handler
 
     def close(self):
         debug("IPC socket shutting down...")
