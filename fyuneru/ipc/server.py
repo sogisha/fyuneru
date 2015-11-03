@@ -30,6 +30,8 @@ class InternalSocketServer:
 
     peers = {}
 
+    __answerFunctions = {} # for IPC query/info service
+
     def __init__(self, key):
         self.IPCKey = os.urandom(32)
 
@@ -97,7 +99,20 @@ class InternalSocketServer:
         self.__registerPeer(sender)
         self.__sendPacket(packet, sender)
 
+    def __handleQueryPacket(packet, sender):
+        question = packet.question
+        if self.__answerFunctions.has_key(question):
+            # a new answer formular
+            answer = InfoPacket()
+            # call handler func to fill in the answer formular
+            self.__answerFunctions[question](packet.arguments, answer)
+            # send the answer back
+            self.__sendPacket(answer, sender)
+
     # ---------- public functions
+
+    def onQuery(self, question, answerfunc):
+        self.__answerFunctions[question] = answerfunc
 
     def close(self):
         # close socket

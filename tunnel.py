@@ -105,9 +105,12 @@ info(\
 tun.up()
 info("%s: up now." % tun.name)
 
-# ---------- create IPC server
+# ---------- create IPC server and config query/info services
 
 ipc = InternalSocketServer(args.key)
+
+# TODO register answer functions with ipc.onQuery(question, func), providing
+# services for IPC client to get its necessary information
 
 # ---------- drop root privileges
 

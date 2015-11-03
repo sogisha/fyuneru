@@ -15,8 +15,8 @@ from time import time
 from struct import pack, unpack
 from socket import socket, AF_INET, SOCK_DGRAM
 
-UDPCONNECTOR_WORD = \
-    "Across the Great Wall, we can reach every corner in the world."
+from fyuneru.util.crypto import Authenticator
+from __protocol import * 
 
 IPCPort = 64089
 
@@ -33,11 +33,14 @@ class InternalSocketClient:
     __lastbeatSent = 0
     __lastbeatRecv = 0
 
-    def __init__(self):
+    def __init__(self, ipckey):
         self.__sock = socket(AF_INET, SOCK_DGRAM)
+        self.__authenticator = Authenticator(ipckey)
 
     def __getattr__(self, name):
         return getattr(self.__sock, name)
+
+    # ---------- heartbeat related
 
     def __registerLastBeatSent(self):
         self.__lastbeatSent = time()
@@ -46,6 +49,40 @@ class InternalSocketClient:
         self.__lastbeatRecv = time()
         self.connected = True
         self.broken = False
+
+    # ---------- internal mechanism dealing with outbound/inbound data
+
+    def __sendPacket(self, packet):
+        """Send a packet class to a destination using local socket."""
+        s = self.__authenticator.sign(str(packet))
+        self.__sock.sendto(s, self.__peer)
+
+    def __recvBuffer(self, buf, sender):
+        """Receive a buffer, unpack into packet, and dispatch it to different
+        handlers. Returns buffer when unpacked is a DataPacket. Otherwise
+        None."""
+        # filter out traffic that's not originating from what we thought
+        if sender != self.__peer: return None
+        # See if is a data packet, which is special.
+        buf = self.__authenticator.verify(buf)
+        if not buf: return None # signature check failed
+        packet = loadBufferToPacket(buf)
+        if not packet: return None
+        if isinstance(packet, DataPacket): return packet.buffer
+
+        # If not, call different handlers to handle this.
+        if isinstance(packet, HeartbeatPacket):
+            self.__handleHeartbeatPacket(packet)
+            return None
+
+    # ---------- inner handlers for different packets
+
+    def __handleHeartbeatPacket(packet):
+        # heart beat reply received, answer
+        if self.connected == False: debug("IPC client connected.")
+        self.__registerLastBeatRecv()
+
+    # ---------- public functions
 
     def close(self):
         debug("IPC socket shutting down...")
@@ -60,7 +97,7 @@ class InternalSocketClient:
         if not self.connected or tdiffSent > 2:
             try:
                 self.__registerLastBeatSent()
-                self.__sock.sendto(UDPCONNECTOR_WORD, self.__peer)
+                self.__sendPacket(HeartbeatPacket())
                 if not self.connected: debug("IPC heartbeat sent to server.")
             except Exception,e:
                 exception(e)
@@ -74,19 +111,17 @@ class InternalSocketClient:
 
     def receive(self):
         buf, sender = self.__sock.recvfrom(65536)
-        if sender != self.__peer: return None
-        if buf.strip() == UDPCONNECTOR_WORD:
-            # connection word received, answer
-            if self.connected == False: debug("IPC client connected.")
-            self.__registerLastBeatRecv()
-            return None
+        buf = self.__recvBuffer(buf, sender) # pre handling this buffer
+
+        if not buf: return None # digested within other mechanism. exit.
         return buf 
 
     def send(self, buf):
         if not self.connected: return
         try:
-            # reply using last recorded peer
-            self.__sock.sendto(buf, self.__peer)
+            packet = DataPacket()
+            packet.buffer = buf
+            self.__sendPacket(packet)
         except Exception,e:
             exception(e)
             error("Failed sending buffer to IPC server.")

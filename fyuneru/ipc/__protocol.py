@@ -49,14 +49,18 @@ class HeartbeatPacket:
 class QueryPacket:
 
     question = ''
+    arguments = {}
 
     def __init__(self, buf=None):
         if None == buf: return
         if ord(buf[0]) != TYPE_QUERY: raise WrongTypeOfPacketException()
-        question = buf[1:]
+        obj = pickle.loads(buf[1:])
+        self.question = obj["question"]
+        self.arguments = obj["arguments"]
 
     def __str__(self):
-        return chr(TYPE_QUERY) + self.question
+        obj = {"question": self.question, "arguments": self.arguments}
+        return chr(TYPE_QUERY) + pickle.dumps(obj)
 
 # Info packet, carries an info text.
 
