@@ -19,8 +19,10 @@ VERSION_REQUIREMENT = "1.1" # required version of `config.json`
 
 ##############################################################################
 
-class ConfigFileException(Exception):
-    pass
+class CoreConfiguration: pass
+class ProxyConfiguration: pass
+
+class ConfigFileException(Exception): pass
 
 ##############################################################################
 
@@ -79,29 +81,26 @@ class Configuration:
             key=self.key
         )
 
-    def getCoreCommand(self, mode, user, debug=False):
-        """Generates a command for starting `tunnel.py`.
-        * `mode`: either `s` for server, or `c` for client.
-        * `user`: (str, str), for (uid-name, gid-name), as which the program
-                  will run after root privileges is no more necessary."""
+    def getProxyInitParameters(self):
+        pass
+
+    def getCoreInitParameters(self, mode):
+        ret = CoreConfiguration()
+        
+        ret.uid = self.user[0]
+        ret.gid = self.user[1]
+        ret.key = self.key
+
         if mode == 's':
-            role = 'server'
+            ret.localIP = self.serverIP
+            ret.remoteIP = self.clientIP
+        elif mode == 'c':
+            ret.localIP = self.clientIP
+            ret.remoteIP = self.serverIP
         else:
-            role = 'client'
-        coreCommand = [\
-            'python', 'tunnel.py',
-            '--parent-pid', str(os.getpid()),
-            '--uidname', user[0],
-            '--gidname', user[1],
-            '--role', role, 
-            '--server-ip', self.serverIP,
-            '--client-ip', self.clientIP,
-            '--key', self.key,
-        ]
-        coreCommand += self.__proxies.keys()
-        if debug:
-            coreCommand.append('--debug')
-        return coreCommand
+            raise Exception("Invalid run mode, either `c` or `s`.")
+
+        return ret 
 
     def __init__(self, config):
         # try load the configuration file string, and parse into JSON.

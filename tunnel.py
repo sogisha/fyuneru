@@ -2,22 +2,48 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import os
 from select import select
 import signal
+import sys
 import logging
 from logging import info, debug, warning, error, critical
 
 from fyuneru.net.vnet import VirtualNetworkInterface
+from fyuneru.util.config import Configuration
 from fyuneru.util.crypto import randint
 from fyuneru.util.debug import showPacket, configLoggingModule
 from fyuneru.util.droproot import dropRoot
 from fyuneru.net.protocol import DataPacket, DataPacketException
 from fyuneru.ipc.server import InternalSocketServer
-from fyuneru.util.procmgr import ParentProcessWatcher
+from fyuneru.util.procmgr import ProcessManager
 
 ##############################################################################
 
 parser = argparse.ArgumentParser()
+
+parser = argparse.ArgumentParser(description="""
+    This is the initator of Fyeneru proxy. Before running, put a `config.json`
+    in the same path as this file.
+    Requires root priviledge for running this script.
+""")
+parser.add_argument(\
+    "--debug",
+    action="store_true",
+    default=False,
+    help = "Print debug info, e.g. packet data."
+)
+parser.add_argument(\
+    "mode",
+    metavar="MODE",
+    type=str, 
+    choices=['s', 'c'],
+    help="""
+        Either 'c' or 's', respectively for client mode and server mode.
+    """
+)
+
+"""
 parser.add_argument(\
     "--debug",
     action="store_true",
@@ -66,19 +92,15 @@ parser.add_argument(\
     type=str,
     required=True
 )
-parser.add_argument(\
-    "SOCKET_NAME",
-    type=str,
-    nargs="+"
-)
+"""
 
 args = parser.parse_args()
 
 
+PATH = os.path.realpath(os.path.dirname(sys.argv[0]))
+MODE = args.mode
+
 MTU = 1400 
-UDPCONNECTOR_WORD = \
-    "Across the Great Wall, we can reach every corner in the world."
-UNIX_SOCKET_NAMES = args.SOCKET_NAME
 
 ##############################################################################
 
@@ -86,53 +108,67 @@ UNIX_SOCKET_NAMES = args.SOCKET_NAME
 
 configLoggingModule(args.debug)
 
-# ---------- config TUN device
+# ---------- load and parse configuration file
 
-if "client" == args.role:
+config = Configuration(open(os.path.join(PATH, 'config.json'), 'r').read())
+coreConfig = config.getCoreInitParameters(MODE)
+
+# ---------- initialize IPC and ProcessManager
+
+ipc = InternalSocketServer(coreConfig.key)
+processes = ProcessManager()
+
+# ---------- config TUN device and start up
+
+if "client" == args.mode:
     info("Running as client.")
-    tun = VirtualNetworkInterface(args.client_ip, args.server_ip)
 else:
     info("Running as server.")
-    tun = VirtualNetworkInterface(args.server_ip, args.client_ip)
+tun = VirtualNetworkInterface(coreConfig.localIP, coreConfig.remoteIP)
 tun.netmask = "255.255.255.0"
 tun.mtu = MTU
-
-info(\
-    """%s: mtu %d  addr %s  netmask %s  dstaddr %s""" % \
-    (tun.name, tun.mtu, tun.addr, tun.netmask, tun.dstaddr)
-)
 
 tun.up()
 info("%s: up now." % tun.name)
 
-# ---------- create IPC server and config query/info services
+# ----------- prepare info for IPC clients(part of each proxy process)
 
-ipc = InternalSocketServer(args.key)
+    # TODO register answer functions with ipc.onQuery(question, func),
+    # providing services for IPC client to get its necessary information
 
-# TODO register answer functions with ipc.onQuery(question, func), providing
-# services for IPC client to get its necessary information
+# ---------- initialize proxy processes
+
+for proxyName in config.listProxies():
+    proxyCommands[proxyName] = \
+        config.getProxyConfig(proxyName).getInitCommand(MODE, bool(args.debug))
+    processes.new(proxyName, proxyCommand)
 
 # ---------- drop root privileges
 
-uidname, gidname = args.uidname, args.gidname
-dropRoot(uidname, gidname)
-
-# ---------- loop
-
-reads = [ipc, tun] # for `select` function
+dropRoot(coreConfig.uid, coreConfig.gid)
 
 ##############################################################################
 
+# register exit function, and start IO loop
+
+reads = [ipc, tun] # for `select` function
+
 def doExit(signum, frame):
-    global reads 
+    global reads, processes 
     info("Exit now.")
-    for each in reads:
-        each.close()
-    exit()
+    # first close TUN devices
+    for reach in reads: each.close()
+    # kill processes
+    t = 1.0 # second(s) waiting for exit
+    try:
+        processes.killall(t)
+        info("Exiting. Wait %f seconds for child processes to exit." % t)
+    except Exception,e:
+        error("Exiting, error: %s" % e)
+    info("Good bye.")
+    sys.exit()
 signal.signal(signal.SIGTERM, doExit)
-
-parentProc = ParentProcessWatcher(args.parent_pid, doExit)
-
+signal.signal(signal.SIGINT, doExit)
 
 
 while True:
