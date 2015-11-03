@@ -9,15 +9,15 @@ internal magic word, and provides additionally abilities like encryption
 underlays, traffic statistics, etc.
 """
 
+import os
 from logging import debug, info, warning, error, exception
 from time import time
 from struct import pack, unpack
 from socket import socket, AF_INET, SOCK_DGRAM
 import random
-from ..util.crypto import Crypto
 
-UDPCONNECTOR_WORD = \
-    "Across the Great Wall, we can reach every corner in the world."
+from ..util.crypto import Crypto, Authenticator
+from __protocol import * 
 
 IPCPort = 64089
 
@@ -31,7 +31,11 @@ class InternalSocketServer:
     peers = {}
 
     def __init__(self, key):
+        self.IPCKey = os.urandom(32)
+
         self.__crypto = Crypto(key)
+        self.__authenticator = Authenticator(self.IPCKey)
+        
         self.__sock = socket(AF_INET, SOCK_DGRAM)
         self.__sock.bind(("127.0.0.1", IPCPort))
 
@@ -63,6 +67,37 @@ class InternalSocketServer:
         peer = possiblePeers[random.randrange(0, len(possiblePeers))]
         self.peers[peer]["send"] = time()
         return peer
+
+    def __sendPacket(self, packet, to):
+        """Send a packet class to a destination using local socket."""
+        s = self.__authenticator.sign(str(packet))
+        self.__sock.sendto(s, to)
+
+    def __recvBuffer(self, buf, sender):
+        """Receive a buffer, unpack into packet, and dispatch it to different
+        handlers. Returns buffer when unpacked is a DataPacket. Otherwise
+        None."""
+        # See if is a data packet, which is special.
+        buf = self.__authenticator.verify(buf)
+        if not buf: return None # signature check failed
+        packet = loadBufferToPacket(buf)
+        if not packet: return None
+        if isinstance(packet, DataPacket): return packet.buffer
+
+        # If not, call different handlers to handle this.
+        if isinstance(packet, HeartbeatPacket):
+            self.__handleHeartbeatPacket(packet, sender)
+            return None
+
+    # ---------- inner handlers for different packets
+
+    def __handleHeartbeatPacket(packet, sender):
+        # If this is a greeting word, register this as a new connected peer
+        # and answer.
+        self.__registerPeer(sender)
+        self.__sendPacket(packet, sender)
+
+    # ---------- public functions
 
     def close(self):
         # close socket
@@ -98,14 +133,10 @@ class InternalSocketServer:
     def receive(self):
         buf, sender = self.__sock.recvfrom(65536)
 
-        if buf.strip() == UDPCONNECTOR_WORD:
-            # If this is a greeting word, register this as a new connected peer
-            # and answer
-            self.__registerPeer(sender)
-            self.__sock.sendto(UDPCONNECTOR_WORD, sender)
-            return None
+        buf = self.__recvBuffer(buf, sender) # pre handling this buffer
+        if not buf: return None # digested within other mechanism. exit.
 
-        # Otherwise, this is data packet and has to be decrypted correctly.
+        # Otherwise, this is data buffer and has to be decrypted correctly.
         decryption = self.__crypto.decrypt(buf)
         if not decryption: return None
 
@@ -135,7 +166,9 @@ class InternalSocketServer:
 
         # Send to this peer. If anything goes wrong, mark this peer as False
         try:
-            self.__sock.sendto(encryption, peer)
+            packet = DataPacket()
+            packet.buffer = encryption
+            self.__sendPacket(packet, peer)
         except Exception,e:
             exception(e) # for debug
             warning(\

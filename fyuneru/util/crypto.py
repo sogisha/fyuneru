@@ -1,6 +1,18 @@
 """
-Encryption Schema
-=================
+Cryptographical Services
+========================
+
+## Authenticator in IPC communication
+
+In IPC communications, data are not encrypted, but it has to be authenticated
+since any process can practically send data to a UDP port our process listening
+on. We currently use HMAC-MD5, for local usage this should be enough and
+performance comes first.
+
+
+## Encryption and Decryption for Internet Traffic
+
+### Schema
 
     1. Cleartext:
                           | BUFFER arbitary length |
@@ -16,8 +28,7 @@ Encryption Schema
            | PSEUDORANDOM BUFFER OF RANDOM LENGTH ........................ |
      Bytes | ?                                                             |
 
-Remarks
-=======
+### Remarks
 
 1. We use HMAC-SHA1 to authenticate the encrypted buffer in following reasons:
 1.1 A good HMAC should be indistinguishable against random bytes without
@@ -82,7 +93,42 @@ def KDF1(secret, length):
     return T[:length]
 KDF = KDF1
 
+##############################################################################
+
+class Authenticator:
+    """Authentication service for IPC mechanism. Provides signing and
+    verifying.  For signing a buffer, the HMAC result will be returned together
+    with original buffer.  This result can then be passed to the verify
+    function on another process. If verification succeeded, return buffer. If
+    not, return None."""
+
+    __ALGORITHM_CONFIG = (hashlib.md5, 16) # 16 bytes output for MD5.
+
+    def __init__(self, key):
+        self.__origHMAC = hmac.new(key, '', self.__ALGORITHM_CONFIG[0])
+
+    def __HMAC(self, buf):
+        worker = self.__origHMAC.copy()
+        worker.update(buf)
+        return worker.digest()
+
+    def sign(self, buf):
+        signature = self.__HMAC(buf)
+        return signature + buf
+
+    def verify(self, buf):
+        hlen = self.__ALGORITHM_CONFIG[1]
+        if len(buf) < hlen: return None
+        signature = buf[:hlen]
+        buf = buf[hlen:]
+        if self.__HMAC(buf) != signature: return None
+        return buf
+
+
+
 class Crypto:
+    """Crypto service for traffic over Internet."""
+
     def __init__(self, passphrase):
         self.__KEY = KDF(passphrase, 32)
         HMACKEY = KDF(self.__KEY, _HASHLEN)

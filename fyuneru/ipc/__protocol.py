@@ -96,6 +96,8 @@ def loadBufferToPacket(buf):
 
 ##############################################################################
 
+__all__ = ['DataPacket', 'HeartbeatPacket', 'QueryPacket', 'InfoPacket', 'loadBufferToPacket']
+
 if __name__ == '__main__':
     pin1 = InfoPacket()
     pin2 = InfoPacket()
