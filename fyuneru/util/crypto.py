@@ -69,6 +69,10 @@ def randint(a, b):
     i = unpack('<L', urandom(4))[0]
     return a + i % (b-a+1)
 
+def randrange(a, b):
+    i = unpack('<L', urandom(4))[0]
+    return a + i % (b-a)
+
 def decidePaddingLength(bufferLength):
     global _RESULT_SIZE
     return 0

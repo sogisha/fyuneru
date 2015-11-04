@@ -11,7 +11,6 @@ from logging import info, debug, warning, error, exception, critical
 
 from fyuneru.net.vnet import VirtualNetworkInterface
 from fyuneru.util.config import Configuration
-from fyuneru.util.crypto import randint
 from fyuneru.util.debug import showPacket, configLoggingModule
 from fyuneru.util.droproot import dropRoot
 from fyuneru.net.protocol import DataPacket, DataPacketException

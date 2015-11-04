@@ -17,6 +17,7 @@ from socket import socket, AF_INET, SOCK_DGRAM
 import random
 
 from ..util.crypto import Crypto, Authenticator
+from fyuneru.util.crypto import randrange
 from __protocol import * 
 
 IPCPort = 64089
@@ -69,7 +70,7 @@ class InternalSocketServer:
         to this peer, and thus the sending timing will be updated."""
         possiblePeers = [i for i in self.peers if self.peers[i] != False]
         if len(possiblePeers) < 1: return None
-        peer = possiblePeers[random.randrange(0, len(possiblePeers))]
+        peer = possiblePeers[randrange(0, len(possiblePeers))]
         self.peers[peer]["send"] = time()
         return peer
 
