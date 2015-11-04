@@ -207,8 +207,8 @@ Find the `run_as.py`, run `python run_as.py s` for setting up a server, and
 `python run_as.py c` for setting up the client. You need root priviledge to
 do this.
 
-Add `--debug` after `run_as.py` will enable the debug mode(currently only for
-the core). The IP frames will be dumped to the console.
+Add `--debug` after `run_as.py` will enable the debug mode. The IP frames will
+be dumped to the console.
 
 ---
 
@@ -405,5 +405,5 @@ XMPP将数据包通过TCP连接传递，但利用了最多2个中间服务器。
 找到`run_as.py`，用命令`python run_as.py s`来启动服务器。
 用`python run_as.py c`来启动客户端。您需要提供root权限。
 
-在`run_as.py`之后添加`--debug`标志将会进入调试模式（当前只能调试核心）。
+在`run_as.py`之后添加`--debug`标志将会进入调试模式。
 在此模式下，将会在控制台输出收发的IP数据帧。
