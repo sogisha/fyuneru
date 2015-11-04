@@ -160,6 +160,7 @@ while True:
                     # Received buffer being digested by InternalSocket itself,
                     # either some internal mechanism packet, or packet with
                     # wrong destination, or packet decryption failed...
+                    debug("Empty packet.")
                     continue
 
                 try:
