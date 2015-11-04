@@ -17,6 +17,7 @@ from fyuneru.util.droproot import dropRoot
 from fyuneru.util.procmgr import ProcessManager
 from fyuneru.util.debug import configLoggingModule
 from fyuneru.ipc.url import IPCServerURL
+from fyuneru.ipc.tools import InitConfigWaiter 
 
 ENCRYPTION_METHOD = 'aes-256-cfb'
 
@@ -41,39 +42,7 @@ configLoggingModule(args.debug)
 
 ipc = InternalSocketClient(args.IPC_SERVER_URL)
 
-queried = False
-
-def queryFiller(packet):
-    global ipc 
-    packet.question = 'init'
-    packet.arguments = {"name": ipc.name}
-    return True
-
-def infoReader(packet):
-    global queried
-    try:
-        title = packet.title
-        if title != 'init': return
-        queried = {
-            "user": (packet.uid, packet.gid),
-            "config": packet.config,
-            "key": packet.key,
-            "mode": packet.mode,
-        }
-    except:
-        pass
-ipc.onInfo(infoReader)
-
-info("Initializing shadowsocks proxy. Waiting for configuration.")
-i = 0
-while i < 5:
-    ipc.doQuery(queryFiller)
-    r = select([ipc], [], [], 1.0)[0]
-    i += 1
-    if len(r) < 1: continue
-    ipc.receive()
-    if queried: break
-
+queried = InitConfigWaiter(ipc).wait()
 if not queried:
     error("Configuration timed out. Exit.")
     ipc.close()
