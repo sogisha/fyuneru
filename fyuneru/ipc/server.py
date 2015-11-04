@@ -167,12 +167,11 @@ class InternalSocketServer:
         if len(decryption) < 8: return None
         header = decryption[:8]
         timestamp = unpack('<d', header)[0]
-        if timestamp > time(): return None # don't fool me
         buf = decryption[8:]
 
         # Only then we will recognize this as a legal status update from this
         # peer. Refresh the peer record with updated receiving timings.
-        self.__registerPeer(sender, timestamp)
+        self.__registerPeer(sender, min(timestamp, time()))
 
         return buf 
 
