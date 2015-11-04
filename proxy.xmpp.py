@@ -13,6 +13,7 @@ and install manually.
 
 
 import argparse
+import sys
 import signal
 from select import select
 import logging
@@ -23,32 +24,69 @@ import xmpp
 from fyuneru.ipc.client import InternalSocketClient
 from fyuneru.util.droproot import dropRoot
 from fyuneru.util.debug import configLoggingModule
+from fyuneru.ipc.url import IPCServerURL
+
+##############################################################################
 
 # ----------- parse arguments
 
 parser = argparse.ArgumentParser()
 
-# if enable debug mode
 parser.add_argument("--debug", action="store_true", default=False)
-
-# drop privilege to ...
-parser.add_argument("--uidname", metavar="UID_NAME", type=str, required=True)
-parser.add_argument("--gidname", metavar="GID_NAME", type=str, required=True)
-
-parser.add_argument("--peer", type=str, required=True)
-parser.add_argument("--jid", type=str, required=True)
-parser.add_argument("--password", type=str, required=True)
+parser.add_argument("IPC_SERVER_URL", type=str)
 
 args = parser.parse_args()
 
-
-# ---------- config log/debug functions
+##############################################################################
 
 configLoggingModule(args.debug)
 
-# ---------- drop root
+# use command line to initialize IPC client
 
-dropRoot(args.uidname, args.gidname)
+ipc = InternalSocketClient(args.IPC_SERVER_URL)
+
+queried = False
+
+def queryFiller(packet):
+    global ipc 
+    packet.question = 'init'
+    packet.arguments = {"name": ipc.name}
+    return True
+
+def infoReader(packet):
+    global queried
+    try:
+        title = packet.title
+        if title != 'init': return
+        queried = {
+            "user": (packet.uid, packet.gid),
+            "config": packet.config,
+            "key": packet.key,
+            "mode": packet.mode,
+        }
+    except:
+        pass
+ipc.onInfo(infoReader)
+
+info("Initializing XMPP proxy. Waiting for configuration.")
+i = 0
+while i < 5:
+    ipc.doQuery(queryFiller)
+    r = select([ipc], [], [], 1.0)[0]
+    i += 1
+    if len(r) < 1: continue
+    ipc.receive()
+    if queried: break
+
+if not queried:
+    error("Configuration timed out. Exit.")
+    ipc.close()
+    sys.exit(1)
+
+##############################################################################
+
+debug("Drop privilege to %s:%s" % queried["user"])
+dropRoot(*queried["user"])
 
 ##############################################################################
 
@@ -103,15 +141,28 @@ class SocketXMPPProxy:
 
 ##############################################################################
 
-proxy = SocketXMPPProxy(args.jid, args.password, args.peer)
-local = InternalSocketClient()
+proxyConfig = queried["config"]
+if 's' == queried["mode"]:
+    proxy = SocketXMPPProxy(\
+        proxyConfig["server"]["jid"],
+        proxyConfig["server"]["password"],
+        proxyConfig["client"]["jid"]
+    )
+elif 'c' == queried["mode"]:
+    proxy = SocketXMPPProxy(\
+        proxyConfig["client"]["jid"],
+        proxyConfig["client"]["password"],
+        proxyConfig["server"]["jid"]
+    )
+else:
+    sys.exit(127)
 
 ##############################################################################
 
 def doExit(signum, frame):
-    global local, proxy
+    global ipc, proxy
     try:
-        local.close()
+        ipc.close()
     except:
         pass
     try:
@@ -126,40 +177,28 @@ signal.signal(signal.SIGTERM, doExit)
 
 sockets = {
     proxy.xmpp.Connection._sock: 'proxy',
-    local: 'local',
+    ipc: 'ipc',
 }
 
 while True:
     try:
-        local.heartbeat()
+        ipc.heartbeat()
         r, w, _ = select(sockets.keys(), [], [], 1)
         for each in r:
             if sockets[each] == 'proxy':
                 proxy.xmpp.Process(1)
                 for b in proxy.recvQueue:
                     debug("Received %d bytes, sending to core." % len(b))
-                    local.send(b)
+                    ipc.send(b)
                 proxy.recvQueue = []
 
-            if sockets[each] == 'local':
-                recv = local.receive()
+            if sockets[each] == 'ipc':
+                recv = ipc.receive()
                 if not recv: continue
                 debug("Received %d bytes, sending to tunnel." % len(recv))
                 proxy.send(recv)
 
-        if local.broken: doExit(None, None)
+        if ipc.broken: doExit(None, None)
 
     except KeyboardInterrupt:
         doExit(None,None)
-
-
-
-
-
-
-
-
-
-
-
-
