@@ -137,24 +137,28 @@ info("%s: up now." % tun.name)
 # services for IPC client to get its necessary information
 
 def ipcOnQueryInit(argv, answer):
+    global config, MODE
     try:
-        print argv
         proxyName = argv["name"]
-        debug("We have got a query from %s" % proxyName)
+        proxyConfig = config.getProxyConfig(proxyName)
         answer.title = 'init' 
 
+        answer.uid = config.user[0]
+        answer.gid = config.user[1]
+        answer.config = proxyConfig
+        answer.key = config.key
+        answer.mode = MODE
     except Exception,e:
         exception(e)
         error("We cannot answer an init query.")
         return False
     return True
-
 ipc.onQuery('init', ipcOnQueryInit)
 
 # ---------- initialize proxy processes
 
 for proxyName in config.listProxies():
-    proxyCommand = config.getProxyInitParameters(proxyName, ipc)
+    proxyCommand = config.getProxyInitParameters(proxyName, ipc, args.debug)
     processes.new(proxyName, proxyCommand)
 
 # ---------- drop root privileges

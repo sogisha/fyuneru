@@ -9,6 +9,8 @@ import signal
 import time
 import logging
 from logging import info, debug, warning, error
+import hashlib
+import hmac
 
 from fyuneru.ipc.client import InternalSocketClient
 from fyuneru.util.droproot import dropRoot
@@ -24,8 +26,9 @@ ENCRYPTION_METHOD = 'aes-256-cfb'
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("IPC_SERVER_URL", type=str)
 parser.add_argument("--debug", action="store_true", default=False)
+
+parser.add_argument("IPC_SERVER_URL", type=str)
 
 """
 # drop privilege to ...
@@ -82,7 +85,12 @@ def infoReader(packet):
     try:
         title = packet.title
         if title != 'init': return
-        queried = True
+        queried = {
+            "user": (packet.uid, packet.gid),
+            "config": packet.config,
+            "key": packet.key,
+            "mode": packet.mode,
+        }
     except:
         pass
 ipc.onInfo(infoReader)
@@ -102,13 +110,11 @@ if not queried:
     ipc.close()
     sys.exit(1)
 
-print "********************************"
-ipc.close()
-exit()
 
 ##############################################################################
 
-dropRoot(args.uidname, args.gidname)
+debug("Drop privilege to %s:%s" % queried["user"])
+dropRoot(*queried["user"])
 
 ##############################################################################
 
@@ -116,48 +122,65 @@ dropRoot(args.uidname, args.gidname)
 
 procmgr = ProcessManager()
 
-if 'client' == args.mode: # CLIENT mode
+sharedsecret= hmac.HMAC(
+    str(ipc.name + '-shadowsocks'),
+    queried["key"],
+    hashlib.sha256
+).digest().encode('base64').strip()
+proxyConfig = queried["config"]
+
+forwardToPort = proxyConfig["server"]["forward-to"] # exit port at server
+
+if 'c' == queried["mode"]: # CLIENT mode
+    if proxyConfig["client"].has_key("proxy"):
+        connectIP = proxyConfig["client"]["proxy"]["ip"]
+        connectPort = proxyConfig["client"]["proxy"]["port"]
+    else:
+        connectIP = proxyConfig["server"]["ip"]
+        connectPort = proxyConfig["server"]["port"]
     sscmd = [
-        args.bin,                                       # shadowsocks-libev
+        proxyConfig["client"]["bin"],                   # shadowsocks-libev
         '-U',                                           # UDP relay only
-        '-L', "127.0.0.1:%d" % (args.FORWARD_TO),       # destinating UDP addr
-        '-k', args.k,                                   # key
-        '-s', args.s,                                   # server host
-        '-p', str(args.p),                              # server port
+        '-L', "127.0.0.1:%d" % forwardToPort,           # destinating UDP addr
+        '-k', sharedsecret,                             # key
+        '-s', connectIP,                                # server host
+        '-p', str(connectPort),                         # server port
         '-b', "127.0.0.1",                              # local addr
-        '-l', str(args.l),                              # local port
+        '-l', str(proxyConfig["client"]["port"]),       # local port(entrance)
         '-m', ENCRYPTION_METHOD,                        # encryption method
     ]
-else: # SERVER mode
+elif 's' == queried['mode']: # SERVER mode
     sscmd = [
-        args.bin,                                       # shadowsocks-libev
+        proxyConfig["server"]["bin"],                   # shadowsocks-libev
         '-U',                                           # UDP relay only
-        '-k', args.k,                                   # key
-        '-s', args.s,                                   # server host
-        '-p', str(args.p),                              # server port
+        '-k', sharedsecret,                             # key
+        '-s', proxyConfig["server"]["ip"],              # server host
+        '-p', str(proxyConfig["server"]["port"]),       # server port
         '-m', ENCRYPTION_METHOD,                        # encryption method
     ]
+else:
+    sys.exit(127)
 
 procmgr.new('shadowsocks', sscmd)
     
 
 ##############################################################################
 
-localSocket = InternalSocketClient() 
 proxySocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-if 'server' == args.mode:
-    proxySocket.bind(('127.0.0.1', args.FORWARD_TO))
+if 's' == queried["mode"]:
+    proxySocket.bind(('127.0.0.1', forwardToPort))
     proxyPeer = None                  # not knowing where to send data back
 else:
-    proxyPeer = ('127.0.0.1', args.l) # send to local tunnel entrance
+    # send to local tunnel entrance
+    proxyPeer = ('127.0.0.1', proxyConfig["client"]["port"])
 
 ##############################################################################
 
 def doExit(signum, frame):
-    global localSocket, proxySocket, procmgr
+    global ipc, proxySocket, procmgr
     try:
-        localSocket.close()
+        ipc.close()
     except:
         pass
     try:
@@ -176,16 +199,16 @@ signal.signal(signal.SIGTERM, doExit)
 
 while True:
     try:
-        localSocket.heartbeat()
+        ipc.heartbeat()
 
-        selected = select([localSocket, proxySocket], [], [], 1.0)
+        selected = select([ipc, proxySocket], [], [], 1.0)
         if len(selected) < 1:
             continue
         readables = selected[0]
 
         for each in readables:
-            if each == localSocket:
-                buf = localSocket.receive()
+            if each == ipc:
+                buf = ipc.receive()
                 if None == buf: continue
                 if None == proxyPeer: continue
                 debug("Received %d bytes, sending to tunnel." % len(buf))
@@ -195,8 +218,8 @@ while True:
                 buf, sender = each.recvfrom(65536)
                 proxyPeer = sender
                 debug("Received %d bytes, sending back to core." % len(buf))
-                localSocket.send(buf)
+                ipc.send(buf)
 
-        if localSocket.broken: doExit(None, None)
+        if ipc.broken: doExit(None, None)
     except KeyboardInterrupt:
         doExit(None, None)

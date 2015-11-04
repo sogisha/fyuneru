@@ -76,30 +76,24 @@ class Configuration:
 
     def getProxyConfig(self, name):
         if not self.__proxies.has_key(name):
-            raise ConfigFileException("No such proxy method defined.")
+            raise ConfigFileException("No such proxy defined.")
         proxyConfig = self.__proxies[name]
-        proxyType = proxyConfig["type"]
-        return ProxyConfig(\
-            user=self.user,
-            name=name,
-            type=proxyType, 
-            config=proxyConfig,
-            key=self.key
-        )
+        return proxyConfig
 
-    def getProxyInitParameters(self, proxyName, IPCServer):
+    def getProxyInitParameters(self, proxyName, IPCServer, debug=False):
         proxyConfig = self.__proxies[proxyName]
         proxyType = proxyConfig["type"]
+        cmd = ["python", proxies[proxyType]]
+        if debug: cmd += ["--debug"]
+
         url = IPCServerURL()
         url.host = IPCServer.local[0]
         url.port = IPCServer.local[1]
         url.user = proxyName
         url.key = IPCServer.IPCKey
-        return [\
-            "python",
-            proxies[proxyType],
-            str(url),
-        ]
+
+        cmd += [str(url)]
+        return cmd
 
     def getCoreInitParameters(self, mode):
         ret = CoreConfiguration()
