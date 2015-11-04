@@ -115,19 +115,18 @@ class SocketXMPPProxy:
 
 proxyConfig = queried["config"]
 if 's' == queried["mode"]:
-    proxy = SocketXMPPProxy(\
-        proxyConfig["server"]["jid"],
-        proxyConfig["server"]["password"],
-        proxyConfig["client"]["jid"]
-    )
+    localJID = proxyConfig["server"]["jid"]
+    localPassword = proxyConfig["server"]["password"]
+    remoteJID = proxyConfig["client"]["jid"]
 elif 'c' == queried["mode"]:
-    proxy = SocketXMPPProxy(\
-        proxyConfig["client"]["jid"],
-        proxyConfig["client"]["password"],
-        proxyConfig["server"]["jid"]
-    )
+    localJID = proxyConfig["client"]["jid"]
+    localPassword = proxyConfig["client"]["password"]
+    remoteJID = proxyConfig["server"]["jid"]
 else:
     sys.exit(127)
+proxy = SocketXMPPProxy(localJID, localPassword, remoteJID)
+
+info("XMPP proxy from [%s](local) to [%s](remote)." % (localJID, remoteJID))
 
 ##############################################################################
 
@@ -154,6 +153,7 @@ sockets = {
 
 while True:
     try:
+        if ipc.broken: doExit(None, None)
         ipc.heartbeat()
         r, w, _ = select(sockets.keys(), [], [], 1)
         for each in r:
@@ -169,8 +169,8 @@ while True:
                 if not recv: continue
                 debug("Received %d bytes, sending to tunnel." % len(recv))
                 proxy.send(recv)
-
-        if ipc.broken: doExit(None, None)
-
     except KeyboardInterrupt:
         doExit(None,None)
+
+    except Exception,e:
+        exception(e)
