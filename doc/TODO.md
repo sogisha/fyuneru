@@ -18,13 +18,16 @@
 [ DONE ] 2. 修改代理接口的协议，也许使用Unix Socket，改进握手的协议，将接口的
             性能统计（通过DataPacket的时刻）也加入。
 
-[  xx  ] 2.1 v1.1-using-unix-socket 分支，使用Unix Socket作为代理进程和主进程
+[delete] 2.1 v1.1-using-unix-socket 分支，使用Unix Socket作为代理进程和主进程
              之间的通信方式。需要一种统一的IPC模块来完成任务。
              (由于UnixSocket的特性，准备放弃此特性，重写由UDP连接的IPC）
+
+[ DONE ] 2.2 使用UDP构建IPC服务器类，并将对代理程序的配置转用IPC完成
 
 [ DONE ] 3. 为Shadowsocks代理增加在服务器重启后也能自动恢复连接的机制（Bugfix）
 
 [ DONE ] 4. 修改加密协议，将加密后的UDP数据包长度随机化
+            此功能目前没有在代码中启用。
 
 [ DONE ] 5. 编写基于XMPP的代理(使用xmpppy)
 
@@ -52,5 +55,5 @@
        本条实现后，可以开发额外的项目，实现多个虚拟网卡组网，甚至基于局域网内
        UDP的无服务器音视频加密聊天。
 
-2. 使用multiprocessing模块代替Unix Socket进行IPC
+2. （放弃）使用multiprocessing模块代替Unix Socket进行IPC
    （当前在v1.1-multiprocessing分支中进行开发）。
