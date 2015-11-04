@@ -13,7 +13,6 @@ import os
 from distutils.version import StrictVersion
 from json import loads
 
-from ..proxyconf import ProxyConfig
 from ..ipc.url import IPCServerURL
 
 VERSION_REQUIREMENT = "1.1" # required version of `config.json`
