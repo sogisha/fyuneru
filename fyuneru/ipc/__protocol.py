@@ -72,7 +72,6 @@ class InfoPacket:
         self.__dict__ = pickle.loads(buf[1:])
 
     def __setattr__(self, name, value):
-        print "set attr: %s" % name
         self.__dict__[name] = value
 
     def __getattr__(self, name):
