@@ -102,7 +102,6 @@ class SocketXMPPProxy:
         if msgtype in ('chat', 'normal', None):
             body = event.getBody()
             try:
-                if type(body) != str: return
                 self.recvQueue.append(body.decode('base64'))
             except:
                 pass
