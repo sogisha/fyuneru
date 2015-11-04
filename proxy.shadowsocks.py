@@ -27,38 +27,7 @@ ENCRYPTION_METHOD = 'aes-256-cfb'
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--debug", action="store_true", default=False)
-
 parser.add_argument("IPC_SERVER_URL", type=str)
-
-"""
-# drop privilege to ...
-parser.add_argument("--uidname", metavar="UID_NAME", type=str, required=True)
-parser.add_argument("--gidname", metavar="GID_NAME", type=str, required=True)
-
-# mode for this script to run
-parser.add_argument(\
-    "--mode",
-    type=str,
-    choices=["server", "client"],
-    required=True
-)
-
-# use the binary executable specified
-parser.add_argument("--bin", type=str, default="/usr/local/bin/ss-tunnel")
-# following -? arguments are for process `sslocal`
-parser.add_argument("-k", type=str, help="Encryption key.")
-parser.add_argument(\
-    "-s",
-    type=str
-)
-parser.add_argument("-p", type=int, help="Server port.")
-parser.add_argument("-l", type=int, help="Local UDP tunnel entry port.")
-# UDP Ports regarding the core process
-parser.add_argument(\
-    "FORWARD_TO",
-    type=int
-)
-"""
 
 args = parser.parse_args()
 

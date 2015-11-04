@@ -43,57 +43,6 @@ parser.add_argument(\
     """
 )
 
-"""
-parser.add_argument(\
-    "--debug",
-    action="store_true",
-    default=False
-)
-parser.add_argument(\
-    "--uidname",
-    metavar="UID_NAME",
-    type=str,
-    required=True
-)
-parser.add_argument(\
-    "--gidname",
-    metavar="GID_NAME",
-    type=str,
-    required=True
-)
-parser.add_argument(\
-    "--parent-pid",
-    type=int,
-    required=True
-)
-parser.add_argument(\
-    "--role",
-    metavar="ROLE",
-    type=str,
-    choices=["server", "client"],
-    default="s",
-    required=True
-)
-parser.add_argument(\
-    "--server-ip",
-    metavar="SERVER_IP",
-    type=str,
-    required=True
-)
-parser.add_argument(\
-    "--client-ip",
-    metavar="CLIENT_IP",
-    type=str,
-    required=True
-)
-parser.add_argument(\
-    "--key",
-    metavar="KEY",
-    type=str,
-    required=True
-)
-"""
-
 args = parser.parse_args()
 
 
