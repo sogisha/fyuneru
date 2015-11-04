@@ -76,7 +76,7 @@ class InfoPacket:
         self.__dict__[name] = value
 
     def __getattr__(self, name):
-        return getattr(self.__hiddenObj, name)
+        return getattr(self.__dict__, name)
 
     def __str__(self):
         return chr(TYPE_INFO) + pickle.dumps(self.__dict__)

@@ -7,7 +7,7 @@ from select import select
 import signal
 import sys
 import logging
-from logging import info, debug, warning, error, critical
+from logging import info, debug, warning, error, exception, critical
 
 from fyuneru.net.vnet import VirtualNetworkInterface
 from fyuneru.util.config import Configuration
@@ -133,8 +133,23 @@ info("%s: up now." % tun.name)
 
 # ----------- prepare info for IPC clients(part of each proxy process)
 
-    # TODO register answer functions with ipc.onQuery(question, func),
-    # providing services for IPC client to get its necessary information
+# register answer functions with ipc.onQuery(question, func), providing
+# services for IPC client to get its necessary information
+
+def ipcOnQueryInit(argv, answer):
+    try:
+        print argv
+        proxyName = argv["name"]
+        debug("We have got a query from %s" % proxyName)
+        answer.title = 'init' 
+
+    except Exception,e:
+        exception(e)
+        error("We cannot answer an init query.")
+        return False
+    return True
+
+ipc.onQuery('init', ipcOnQueryInit)
 
 # ---------- initialize proxy processes
 
@@ -156,7 +171,7 @@ def doExit(signum, frame):
     global reads, processes 
     info("Exit now.")
     # first close TUN devices
-    for reach in reads: each.close()
+    for each in reads: each.close()
     # kill processes
     t = 1.0 # second(s) waiting for exit
     try:
@@ -172,7 +187,6 @@ signal.signal(signal.SIGINT, doExit)
 
 while True:
     try:
-        parentProc.watch()
         
         # ---------- deal with I/O things
         

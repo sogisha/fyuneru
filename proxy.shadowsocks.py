@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import sys
 from select import select
 import socket
 import signal
@@ -24,11 +25,9 @@ ENCRYPTION_METHOD = 'aes-256-cfb'
 parser = argparse.ArgumentParser()
 
 parser.add_argument("IPC_SERVER_URL", type=str)
-
-"""
-# if enable debug mode
 parser.add_argument("--debug", action="store_true", default=False)
 
+"""
 # drop privilege to ...
 parser.add_argument("--uidname", metavar="UID_NAME", type=str, required=True)
 parser.add_argument("--gidname", metavar="GID_NAME", type=str, required=True)
@@ -62,6 +61,10 @@ args = parser.parse_args()
 
 ##############################################################################
 
+configLoggingModule(args.debug)
+
+##############################################################################
+
 # use command line to initialize IPC client
 
 ipc = InternalSocketClient(args.IPC_SERVER_URL)
@@ -69,26 +72,39 @@ ipc = InternalSocketClient(args.IPC_SERVER_URL)
 queried = False
 
 def queryFiller(packet):
-    global args
+    global ipc 
     packet.question = 'init'
-    packet.arguments = {"name": args.NAME}
+    packet.arguments = {"name": ipc.name}
+    return True
 
 def infoReader(packet):
     global queried
-    print packet
-    exit()
+    try:
+        title = packet.title
+        if title != 'init': return
+        queried = True
+    except:
+        pass
+ipc.onInfo(infoReader)
 
-
-while True:
-    r = select([ipc], [], [], 2.0)[0]
-    if len(r) < 1: continue
-    ipc.onInfo(infoReader)
+info("Initializing shadowsocks proxy. Waiting for configuration.")
+i = 0
+while i < 5:
     ipc.doQuery(queryFiller)
+    r = select([ipc], [], [], 1.0)[0]
+    i += 1
+    if len(r) < 1: continue
+    ipc.receive()
     if queried: break
 
-##############################################################################
+if not queried:
+    error("Configuration timed out. Exit.")
+    ipc.close()
+    sys.exit(1)
 
-configLoggingModule(args.debug)
+print "********************************"
+ipc.close()
+exit()
 
 ##############################################################################
 

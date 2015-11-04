@@ -41,7 +41,7 @@ class InternalSocketClient:
         self.__sock = socket(AF_INET, SOCK_DGRAM)
         self.__authenticator = Authenticator(server.key)
         self.__peer = (server.host, server.port)
-        self.__name = server.user
+        self.name = server.user
 
     def __getattr__(self, name):
         return getattr(self.__sock, name)
@@ -86,20 +86,22 @@ class InternalSocketClient:
 
     # ---------- inner handlers for different packets
 
-    def __handleHeartbeatPacket(packet):
+    def __handleHeartbeatPacket(self, packet):
         # heart beat reply received, answer
         if self.connected == False: debug("IPC client connected.")
         self.__registerLastBeatRecv()
 
-    def __handleInfoPacket(packet):
+    def __handleInfoPacket(self, packet):
         if self.__infoHandler: self.__infoHandler(packet)
 
     # ---------- public functions
 
     def doQuery(self, fillerFunc):
         packet = QueryPacket()
-        fillerFunc(packet)
-        self.__sendPacket(packet)
+        s = fillerFunc(packet)
+        if s:
+            debug("Sent a query packet.")
+            self.__sendPacket(packet)
 
     def onInfo(self, handler):
         self.__infoHandler = handler

@@ -99,21 +99,22 @@ class InternalSocketServer:
 
     # ---------- inner handlers for different packets
 
-    def __handleHeartbeatPacket(packet, sender):
+    def __handleHeartbeatPacket(self, packet, sender):
         # If this is a greeting word, register this as a new connected peer
         # and answer.
         self.__registerPeer(sender)
         self.__sendPacket(packet, sender)
 
-    def __handleQueryPacket(packet, sender):
+    def __handleQueryPacket(self, packet, sender):
         question = packet.question
+        debug("Got a query packet.")
         if self.__answerFunctions.has_key(question):
             # a new answer formular
             answer = InfoPacket()
             # call handler func to fill in the answer formular
-            self.__answerFunctions[question](packet.arguments, answer)
+            s = self.__answerFunctions[question](packet.arguments, answer)
             # send the answer back
-            self.__sendPacket(answer, sender)
+            if s: self.__sendPacket(answer, sender)
 
     # ---------- public functions
 

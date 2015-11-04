@@ -14,6 +14,7 @@ from distutils.version import StrictVersion
 from json import loads
 
 from ..proxyconf import ProxyConfig
+from ..ipc.url import IPCServerURL
 
 VERSION_REQUIREMENT = "1.1" # required version of `config.json`
 
@@ -87,14 +88,17 @@ class Configuration:
         )
 
     def getProxyInitParameters(self, proxyName, IPCServer):
-        proxyConfig = self.__proxies[name]
+        proxyConfig = self.__proxies[proxyName]
         proxyType = proxyConfig["type"]
+        url = IPCServerURL()
+        url.host = IPCServer.local[0]
+        url.port = IPCServer.local[1]
+        url.user = proxyName
+        url.key = IPCServer.IPCKey
         return [\
             "python",
             proxies[proxyType],
-            IPCServer.local[0], # IPC Server Host
-            IPCServer.local[1], # IPC Server Port
-            IPCServer.IPCKey,   # IPC Internal Communication AuthKey
+            str(url),
         ]
 
     def getCoreInitParameters(self, mode):
