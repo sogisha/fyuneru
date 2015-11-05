@@ -61,7 +61,12 @@ class InternalSocketClient:
     def __sendPacket(self, packet):
         """Send a packet class to a destination using local socket."""
         s = self.__authenticator.sign(str(packet))
-        self.__sock.sendto(s, self.__peer)
+        try:
+            self.__sock.sendto(s, self.__peer)
+        except Exception,e:
+            exception(e)
+            self.connected = False
+            self.broken = True
 
     def __recvBuffer(self, buf, sender):
         """Receive a buffer, unpack into packet, and dispatch it to different
