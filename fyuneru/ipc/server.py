@@ -119,6 +119,10 @@ class InternalSocketServer:
 
     # ---------- public functions
 
+    def report(self):
+        """Report status of IPC server"""
+        return ''
+
     def onQuery(self, question, answerfunc):
         self.__answerFunctions[question] = answerfunc
 

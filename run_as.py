@@ -8,10 +8,11 @@ import signal
 import sys
 import logging
 from logging import info, debug, warning, error, exception, critical
+import time
 
 from fyuneru.net.vnet import VirtualNetworkInterface
 from fyuneru.util.config import Configuration
-from fyuneru.util.debug import showPacket, configLoggingModule
+from fyuneru.util.debug import showPacket, showIPCReport, configLoggingModule
 from fyuneru.util.droproot import dropRoot
 from fyuneru.net.protocol import DataPacket, DataPacketException
 from fyuneru.ipc.server import InternalSocketServer
@@ -137,8 +138,17 @@ signal.signal(signal.SIGTERM, doExit)
 signal.signal(signal.SIGINT, doExit)
 
 
+ipcLastReport = time.time() 
+
 while True:
     try:
+        now = time.time()
+
+        # ---------- output IPC report
+
+        if now - ipcLastReport > 15.0:
+            ipcLastReport = now
+            debug(showIPCReport(ipc.report()))
         
         # ---------- deal with I/O things
         
@@ -146,13 +156,14 @@ while True:
         for each in readables:
             if each == tun:
                 # ---------- forward packets came from tun0
-                buf = each.read(65536) # each.read(each.mtu)
+                ipPacket = each.read(65536) # each.read(each.mtu)
                 # pack buf with timestamp
                 packet = DataPacket()
-                packet.data = buf
+                packet.data = str(ipPacket) 
                 # encrypt and sign buf
                 ipc.send(str(packet))
-                debug(showPacket(buf))
+                debug(showPacket(ipPacket))
+
             if each == ipc:
                 # ---------- receive packets from internet
                 buf = each.receive()

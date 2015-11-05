@@ -6,6 +6,8 @@ import struct
 from logging import info, debug, critical, exception
 from select import select
 
+from .protocol import IPPacket 
+
 TUNSETIFF = 0x400454ca  
 IFF_TUN   = 0x0001      # Set up TUN device
 IFF_TAP   = 0x0002      # Set up TAP device
@@ -68,7 +70,8 @@ class VirtualNetworkInterface:
         os.write(self.__tun, buf)
 
     def read(self, size=65536):
-        return os.read(self.__tun, size)
+        packet = IPPacket(os.read(self.__tun, size))
+        return packet
 
     def close(self):
         try:

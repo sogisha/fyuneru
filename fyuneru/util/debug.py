@@ -1,8 +1,8 @@
-import socket
-from struct import * 
 import logging
 import sys
 import os
+
+from ..net.protocol import IPPacket
 
 ##############################################################################
 
@@ -36,41 +36,18 @@ def colorify(text, color):
 
 ##############################################################################
 
-def _decodeIPFrame(buf):
-    # meaning this is not raw packet, but with 4 bytes prefixed as in TUN
-    # device defined
-    if buf[:2] == '\x00\x00': buf = buf[4:] 
-
-    ip_header = buf[0:20]
-    iph = unpack('!BBHHHBBH4s4s' , ip_header)
-     
-    version_ihl = iph[0]
-    version = (version_ihl >> 4) & 0xF
-    ihl = version_ihl & 0xF
-     
-    iph_length = ihl * 4
-     
-    ttl = iph[5]
-    protocol = iph[6]
-    s_addr = socket.inet_ntoa(iph[8])
-    d_addr = socket.inet_ntoa(iph[9])
-
-    payload = buf[iph_length:]
-
-    ip_meta = {
-        "version": version,
-        "length": str(ihl),
-        "TTL": ttl,
-        "protocol": protocol,
-        "src": str(s_addr),
-        "dst": str(d_addr),
-    }
-    return ip_meta, payload
-
-def showPacket(buf):
+def showPacket(p):
+    if type(p) == str:
+        buf = p
+        p = IPPacket(p)
+    elif isinstance(p, IPPacket):
+        buf = str(p)
+    else:
+        return '(Not a valid IP packet)'
+    
     width = 16
     lines = []
-    origbuf = buf
+    origbuf = buf 
     while buf != '':
         lines.append(buf[:width])
         buf = buf[width:]
@@ -86,19 +63,18 @@ def showPacket(buf):
                 asciistr += c
             else:
                 asciistr += '.'
-        start += len(line)
         hexstr = hexstr.ljust(3 * width)
         ret += "%08x: %s: %s\n" % (start, hexstr, asciistr)
+        start += len(line)
 
     ipReport = ''
     try:
-        ipMeta, ipPayload = _decodeIPFrame(origbuf)
-        ipReport = "Ver %s :: TTL %d :: Protocol %s :: Src %s :: Dst %s" % (\
-            ipMeta["version"],
-            ipMeta["TTL"],
-            ipMeta["protocol"],
-            ipMeta["src"],
-            ipMeta["dst"]
+        ipReport = "Ver %s :: TTL %d :: Protocol %s(%s) :: Src %s :: Dst %s" % (\
+            p.version,
+            p.TTL,
+            p.protocol, p.protocolName,
+            p.src,
+            p.dst
         )
         ret = ipReport + "\n" + ret
     except Exception,e:
@@ -106,6 +82,9 @@ def showPacket(buf):
         pass
 
     return ret.strip() 
+
+def showIPCReport(buf):
+    return ''
 
 ##############################################################################
 
