@@ -35,7 +35,7 @@ class VirtualNetworkInterface:
             tun = fcntl.ioctl(\
                 self.__tun,
                 TUNSETIFF,
-                struct.pack("16sH", "fyuneru-%d", IFF_TUN | IFF_NO_PI)
+                struct.pack("16sH", "fyuneru-%d", IFF_TUN)
             )
         except Exception,e:
             exception(e)
