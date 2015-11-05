@@ -37,6 +37,10 @@ def colorify(text, color):
 ##############################################################################
 
 def _decodeIPFrame(buf):
+    # meaning this is not raw packet, but with 4 bytes prefixed as in TUN
+    # device defined
+    if buf[:2] == '\x00\x00': buf = buf[4:] 
+
     ip_header = buf[0:20]
     iph = unpack('!BBHHHBBH4s4s' , ip_header)
      
